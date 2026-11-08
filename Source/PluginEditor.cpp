@@ -65,6 +65,13 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     addAndMakeVisible (previousButton);
     addAndMakeVisible (nextButton);
 
+    programButton.setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    programButton.onClick = [this]
+    {
+        setView (listTab.getToggleState() ? lucky::BrowserPanel::View::map : lucky::BrowserPanel::View::list);
+    };
+    addAndMakeVisible (programButton);
+
     const auto idleIcon = makeFolderIcon (lucky::theme::textDim);
     const auto hoverIcon = makeFolderIcon (lucky::theme::text);
     folderButton.setImages (idleIcon.get(), hoverIcon.get());
@@ -165,6 +172,7 @@ void LuckySevenEditor::setView (lucky::BrowserPanel::View view)
 {
     browser.setView (view);
     mapTab.setToggleState (view == lucky::BrowserPanel::View::map, juce::dontSendNotification);
+    programButton.setTooltip (view == lucky::BrowserPanel::View::map ? "Show the program list" : "Back to the sound map");
     listTab.setToggleState (view == lucky::BrowserPanel::View::list, juce::dontSendNotification);
     audioProcessor.getParameters().state.setProperty (LuckySevenProcessor::viewProperty,
                                                       lucky::BrowserPanel::viewToString (view), nullptr);
@@ -369,6 +377,7 @@ void LuckySevenEditor::resized()
     pill.setX (topBar.getX() + 16);
     previousButton.setBounds (pill.removeFromLeft (30));
     nextButton.setBounds (pill.removeFromRight (30));
+    programButton.setBounds (pill);
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
     const auto knobSlot = strip.getWidth() / 5;
