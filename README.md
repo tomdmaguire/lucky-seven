@@ -4,7 +4,7 @@ A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7
 
 ## Features
 
-- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (Shift+←/→ jumps to the nearest shorter or longer program with a similar tone), and click legend entries to filter by category or favourites. While audio plays, ripples spread from the current program and fade over its decay time.
+- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (Shift+←/→ jumps to the nearest shorter or longer program with a similar tone), and click legend entries to filter by category or favourites, and search to narrow it further. While audio plays, ripples spread from the current program and fade over its decay time.
 - **List view** with search across all categories, favourites, and A–Z browsing.
 - **Decay**: shortens any program's tail while keeping its frequency-dependent character (highs still die faster than lows).
 - **Pre-delay**, plus **Low Cut** (20 Hz–1 kHz) and **High Cut** (1–20 kHz) at 12 dB/oct on the reverb only.
@@ -15,7 +15,7 @@ A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7
 - **A/B comparison**: two slots each remember the program and every control; click A or B in the top bar to switch.
 - **Resizable window** from 75% to 200%: drag the corner or pick a size from the **⋯** menu.
 - **True stereo**: separate left- and right-input responses, as captured from the hardware.
-- **Your own IRs**: any WAV, AIFF or FLAC in the IR folder is picked up; each subfolder becomes a category.
+- **Your own IRs**: add any number of folders of WAV, AIFF or FLAC impulse responses (**··· → IR folders → Add a folder…**). Each subfolder becomes a category, numbered folder names are tidied, left/right file pairs play in true stereo, and recordings with a hiss floor are measured and trimmed correctly. Works with Ableton's Convolution Reverb pack: add `~/Music/Ableton/Factory Packs/Convolution Reverb/IRs`.
 - **Light on CPU**: about 2–3% of one core per instance for the longest programs at 44.1/48 kHz on Apple Silicon, and no processing at all once the input has been silent for longer than the tail. At 88.2/96 kHz the cost roughly triples, so use a buffer of 256 samples or more there.
 
 ## Installing

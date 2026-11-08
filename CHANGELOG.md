@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.0
+
+- Several IR folders: add, remove and reveal them from the ··· menu under IR folders. The folder picker can now open macOS packages such as Ableton's Factory Packs.
+- Works with Ableton's Convolution Reverb pack: left/right file pairs play as one true-stereo reverb, numbered folder names are tidied ("05 Halls" becomes "Halls"), and categories with the same name merge across folders.
+- More accurate decay times for IRs recorded with a hiss floor or a leading click; hiss tails are trimmed on load.
+- Search now works on the map as well as the list, together with the category filters, and the legend shows match counts.
+- The map legend wraps onto more rows when there are many categories.
+
 ## v1.0.1
 
 - New installer: download Lucky-Seven.pkg, open it, and choose VST3 and/or AU. No Terminal step needed.
