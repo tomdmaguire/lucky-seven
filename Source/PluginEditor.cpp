@@ -34,7 +34,10 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     : AudioProcessorEditor (&p),
       audioProcessor (p),
       browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); },
-               [this] (const juce::String& id) { audioProcessor.getCatalogue().toggleFavourite (id); })
+               [this] (const juce::String& id) { audioProcessor.getCatalogue().toggleFavourite (id); },
+               { [this] { audioProcessor.getCatalogue().getRoot().startAsProcess(); },
+                 [this] { chooseFolder(); },
+                 [this] { audioProcessor.getCatalogue().rescan(); } })
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (browser);
@@ -229,6 +232,7 @@ void LuckySevenEditor::refreshItems()
         items.push_back ({ std::move (entry), profile, favourite });
     }
 
+    browser.setFolder (catalogue.getRoot());
     browser.setItems (items);
     shownSelection = audioProcessor.getSelectedIrId();
     browser.setSelectedId (shownSelection);
@@ -311,6 +315,8 @@ void LuckySevenEditor::showMenu()
     menu.addItem (rescanItem, "Rescan IR folder");
     menu.addItem (chooseItem, "Choose IR folder...");
     menu.addItem (revealItem, "Show in Finder", root.exists());
+    menu.addSeparator();
+    menu.addItem ("Get the free Bricasti IRs...", [] { lucky::EmptyStateView::downloadUrl.launchInDefaultBrowser(); });
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton),
                         [this, root] (int result)

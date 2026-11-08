@@ -139,7 +139,12 @@ std::optional<IrEntry> IrCatalogue::findEntry (const juce::String& id) const
 void IrCatalogue::rescan()
 {
     stopThread (5000);
-    auto scanned = scanLibrary (getRoot());
+
+    const auto root = getRoot();
+    if (root == defaultRoot() && ! root.exists())
+        root.createDirectory();
+
+    auto scanned = scanLibrary (root);
 
     {
         const juce::ScopedLock scope (lock);

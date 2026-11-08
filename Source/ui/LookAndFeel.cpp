@@ -61,6 +61,25 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
 void LuckyLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour&,
                                              bool isMouseOver, bool)
 {
+    if (button.getProperties()["outline"])
+    {
+        const auto bounds = button.getLocalBounds().toFloat().reduced (0.75f);
+        const auto colour = button.findColour (juce::Slider::rotarySliderFillColourId);
+        if (button.getProperties()["primary"])
+        {
+            g.setColour (isMouseOver ? colour.brighter (0.15f) : colour);
+            g.fillRoundedRectangle (bounds, 4.0f);
+        }
+        else
+        {
+            g.setColour (isMouseOver ? theme::text.withAlpha (0.06f) : juce::Colours::transparentBlack);
+            g.fillRoundedRectangle (bounds, 4.0f);
+            g.setColour (theme::outline.brighter (isMouseOver ? 0.4f : 0.15f));
+            g.drawRoundedRectangle (bounds, 4.0f, 1.0f);
+        }
+        return;
+    }
+
     if (button.getProperties()["round"])
     {
         if (isMouseOver)
@@ -85,7 +104,21 @@ void LuckyLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& bu
 
 juce::Font LuckyLookAndFeel::getTextButtonFont (juce::TextButton& button, int)
 {
-    return theme::labelFont (button.getProperties()["small"] ? 10.5f : 13.0f);
+    const auto& properties = button.getProperties();
+    return theme::labelFont (properties["small"] || properties["outline"] ? 11.0f : 13.0f);
+}
+
+void LuckyLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& button, bool isMouseOver, bool isButtonDown)
+{
+    if (! button.getProperties()["outline"])
+    {
+        juce::LookAndFeel_V4::drawButtonText (g, button, isMouseOver, isButtonDown);
+        return;
+    }
+
+    g.setFont (getTextButtonFont (button, button.getHeight()));
+    g.setColour (button.getProperties()["primary"] ? theme::background : theme::text);
+    g.drawText (button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
 }
 
 } // namespace lucky

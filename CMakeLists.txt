@@ -49,6 +49,7 @@ target_sources(LuckySeven PRIVATE
     Source/ui/ListBrowserView.cpp
     Source/ui/SoundMapView.cpp
     Source/ui/BrowserPanel.cpp
+    Source/ui/EmptyStateView.cpp
     ${LUCKY_SEVEN_CORE_SOURCES}
 )
 

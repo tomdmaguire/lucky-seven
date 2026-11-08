@@ -2,6 +2,7 @@
 
 #include "ListBrowserView.h"
 #include "SoundMapView.h"
+#include "EmptyStateView.h"
 
 namespace lucky
 {
@@ -12,7 +13,10 @@ class BrowserPanel final : public juce::Component
 public:
     enum class View { map, list };
 
-    BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite);
+    BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite, EmptyStateView::Actions emptyActions);
+
+    /** Folder shown in the empty-state explanation. */
+    void setFolder (const juce::File& folder);
 
     void setItems (const std::vector<BrowserItem>& items);
     void setSelectedId (const juce::String& id);
@@ -27,6 +31,7 @@ public:
 private:
     SoundMapView map;
     ListBrowserView list;
+    EmptyStateView emptyState;
 };
 
 } // namespace lucky

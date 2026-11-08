@@ -3,11 +3,12 @@
 namespace lucky
 {
 
-BrowserPanel::BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite)
-    : map (onSelect), list (onSelect, std::move (onToggleFavourite))
+BrowserPanel::BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite, EmptyStateView::Actions emptyActions)
+    : map (onSelect), list (onSelect, std::move (onToggleFavourite)), emptyState (std::move (emptyActions))
 {
     addChildComponent (map);
     addChildComponent (list);
+    addChildComponent (emptyState);
     setView (View::map);
 }
 
@@ -15,6 +16,12 @@ void BrowserPanel::setItems (const std::vector<BrowserItem>& items)
 {
     map.setItems (items);
     list.setItems (items);
+    emptyState.setVisible (items.empty());
+}
+
+void BrowserPanel::setFolder (const juce::File& folder)
+{
+    emptyState.setFolder (folder);
 }
 
 void BrowserPanel::setSelectedId (const juce::String& id)
@@ -38,6 +45,7 @@ void BrowserPanel::resized()
 {
     map.setBounds (getLocalBounds());
     list.setBounds (getLocalBounds());
+    emptyState.setBounds (getLocalBounds());
 }
 
 } // namespace lucky
