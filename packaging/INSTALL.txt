@@ -1,6 +1,10 @@
 Installing Lucky Seven
 ======================
 
+The easiest way is the installer: download Lucky-Seven-<version>.pkg from
+https://github.com/tomdmaguire/lucky-seven/releases/latest and open it.
+These steps are for installing by hand from this zip instead.
+
 1. Copy the plugins into place:
    - "Lucky Seven.vst3"      -> ~/Library/Audio/Plug-Ins/VST3
    - "Lucky Seven.component" -> ~/Library/Audio/Plug-Ins/Components   (AU, for Logic and GarageBand)
@@ -16,7 +20,9 @@ Installing Lucky Seven
    Alternatively, if your DAW reports the plugin as blocked, open
    System Settings > Privacy & Security and click "Allow Anyway".
 
-3. Get the impulse responses. Download Samplicity's free Bricasti M7 archive,
+3. Get the impulse responses. The easiest way: open Lucky Seven and click
+   "Download Bricasti IRs" on its first screen. To do it by hand, download
+   Samplicity's free Bricasti M7 archive,
    "Samplicity - Bricasti IRs version 2023-10.zip" (964 MB):
    https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip
    (If that link stops working, it's the "Bricasti M7 impulse response archive"

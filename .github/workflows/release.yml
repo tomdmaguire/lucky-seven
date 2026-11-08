@@ -37,11 +37,12 @@ jobs:
           cp Resources/Fonts/OFL.txt "dist/$package/Barlow-OFL.txt"
           cp packaging/INSTALL.txt "dist/$package/INSTALL.txt"
           (cd dist && ditto -c -k --keepParent "$package" "$package.zip")
+          packaging/build-pkg.sh "${GITHUB_REF_NAME#v}" "dist/$package/Lucky Seven.vst3" "dist/$package/Lucky Seven.component" "dist/Lucky-Seven-${GITHUB_REF_NAME}.pkg"
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "dist/Lucky-Seven-${GITHUB_REF_NAME}-macOS.zip" \
+          gh release create "$GITHUB_REF_NAME" "dist/Lucky-Seven-${GITHUB_REF_NAME}.pkg" "dist/Lucky-Seven-${GITHUB_REF_NAME}-macOS.zip" \
             --title "Lucky Seven $GITHUB_REF_NAME" \
             --notes-file CHANGELOG.md

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>Lucky Seven __VERSION__</title>
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+    <options customize="allow" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+    <domains enable_localSystem="true"/>
+    <allowed-os-versions>
+        <os-version min="13.0"/>
+    </allowed-os-versions>
+    <choices-outline>
+        <line choice="vst3"/>
+        <line choice="au"/>
+    </choices-outline>
+    <choice id="vst3" title="VST3 plug-in" description="Installs Lucky Seven.vst3 into /Library/Audio/Plug-Ins/VST3. Works in most DAWs.">
+        <pkg-ref id="com.luckyseven.reverb.vst3"/>
+    </choice>
+    <choice id="au" title="Audio Unit plug-in" description="Installs Lucky Seven.component into /Library/Audio/Plug-Ins/Components, for Logic Pro, GarageBand and other AU hosts.">
+        <pkg-ref id="com.luckyseven.reverb.au"/>
+    </choice>
+    <pkg-ref id="com.luckyseven.reverb.vst3" version="__VERSION__" onConclusion="none">LuckySeven-VST3.pkg</pkg-ref>
+    <pkg-ref id="com.luckyseven.reverb.au" version="__VERSION__" onConclusion="none">LuckySeven-AU.pkg</pkg-ref>
+</installer-gui-script>
