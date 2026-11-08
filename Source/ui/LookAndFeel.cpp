@@ -30,7 +30,10 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
     const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (4.0f);
     const auto radius = std::min (bounds.getWidth(), bounds.getHeight()) * 0.5f;
     const auto centre = bounds.getCentre();
-    const auto colour = slider.isEnabled() ? slider.findColour (juce::Slider::rotarySliderFillColourId) : theme::textDim.withAlpha (0.5f);
+    const auto cut = slider.getProperties()["cut"].toString();
+    const auto fillsFromEnd = cut == "high";
+    const auto isOff = (cut == "low" && sliderPos <= 0.001f) || (fillsFromEnd && sliderPos >= 0.999f);
+    const auto colour = slider.isEnabled() && ! isOff ? slider.findColour (juce::Slider::rotarySliderFillColourId) : theme::textDim.withAlpha (0.5f);
     const auto angle = startAngle + sliderPos * (endAngle - startAngle);
 
     g.setColour (colour.withAlpha (0.07f));
@@ -42,14 +45,15 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
     g.strokePath (ring, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     juce::Path value;
-    value.addCentredArc (centre.x, centre.y, radius - 1.0f, radius - 1.0f, 0.0f, startAngle, angle, true);
+    value.addCentredArc (centre.x, centre.y, radius - 1.0f, radius - 1.0f, 0.0f,
+                         fillsFromEnd ? angle : startAngle, fillsFromEnd ? endAngle : angle, true);
     g.setColour (colour);
     g.strokePath (value, juce::PathStrokeType (2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     const auto tip = centre.getPointOnCircumference (radius - 1.0f, angle);
     g.fillEllipse (juce::Rectangle<float> (7.0f, 7.0f).withCentre (tip));
 
-    g.setColour (theme::text);
+    g.setColour (isOff ? theme::textDim : theme::text);
     g.setFont (theme::labelFont (13.0f));
     g.drawText (slider.getTextFromValue (slider.getValue()), bounds.reduced (radius * 0.2f), juce::Justification::centred);
 }

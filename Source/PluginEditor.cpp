@@ -83,6 +83,8 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
 
     lowCut.slider.textFromValueFunction = [] (double hertz) { return hertz <= lucky::ReverbEngine::minCutHz + 0.5 ? juce::String ("OFF") : formatHz (hertz); };
     highCut.slider.textFromValueFunction = [] (double hertz) { return hertz >= lucky::ReverbEngine::maxCutHz - 1.0 ? juce::String ("OFF") : formatHz (hertz); };
+    lowCut.slider.getProperties().set ("cut", "low");
+    highCut.slider.getProperties().set ("cut", "high");
     lowCut.slider.setTooltip ("Low cut on the reverb only, 12 dB/oct");
     highCut.slider.setTooltip ("High cut on the reverb only, 12 dB/oct");
 
