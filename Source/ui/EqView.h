@@ -12,6 +12,9 @@ class EqView final : public juce::Component,
 public:
     EqView (juce::RangedAudioParameter& lowCut, juce::RangedAudioParameter& highCut);
 
+    /** Colour of the curve and handle. */
+    void setAccent (juce::Colour colour);
+
     void paint (juce::Graphics&) override;
     void mouseDown (const juce::MouseEvent&) override;
     void mouseDrag (const juce::MouseEvent&) override;
@@ -34,6 +37,7 @@ private:
     float lowHz = 20.0f, highHz = 20000.0f;
     float dragStartCentre = 0.0f, dragStartWidth = 0.0f;
     bool dragging = false;
+    juce::Colour accent { 0xffff4d6d };
 };
 
 } // namespace lucky

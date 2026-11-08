@@ -20,6 +20,7 @@ public:
     /** Highlights the given program and its category without firing the selection callback. */
     void setSelectedId (const juce::String& id);
 
+    void paint (juce::Graphics&) override;
     void resized() override;
 
 private:

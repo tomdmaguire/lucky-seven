@@ -6,17 +6,17 @@ namespace lucky
 
 namespace
 {
-constexpr int rowHeight = 26;
-constexpr int categoryColumnWidth = 170;
+constexpr int rowHeight = 28;
+constexpr int categoryColumnWidth = 190;
 
-void paintRowBackground (juce::Graphics& g, int width, int height, bool selected)
+void paintRowBackground (juce::Graphics& g, int width, int height, bool selected, juce::Colour colour)
 {
     if (selected)
     {
-        g.setColour (theme::panelRaised);
+        g.setColour (colour.withAlpha (0.12f));
         g.fillRect (0, 0, width, height);
-        g.setColour (theme::accent);
-        g.fillRect (0, 0, 3, height);
+        g.setColour (colour);
+        g.fillRect (0, 0, 2, height);
     }
 }
 } // namespace
@@ -33,15 +33,15 @@ public:
         if (row < 0 || row >= getNumRows())
             return;
 
-        paintRowBackground (g, width, height, selected);
         const auto& [index, name] = owner.categories[static_cast<size_t> (row)];
+        paintRowBackground (g, width, height, selected, theme::categoryColour (index));
 
         g.setColour (theme::categoryColour (index));
-        g.fillEllipse (14.0f, static_cast<float> (height) * 0.5f - 4.0f, 8.0f, 8.0f);
+        g.fillEllipse (16.0f, static_cast<float> (height) * 0.5f - 3.0f, 6.0f, 6.0f);
 
-        g.setFont (juce::FontOptions (14.0f));
+        g.setFont (theme::labelFont (12.0f));
         g.setColour (selected ? theme::text : theme::textDim);
-        g.drawText (name, 30, 0, width - 70, height, juce::Justification::centredLeft);
+        g.drawText (name.toUpperCase(), 32, 0, width - 72, height, juce::Justification::centredLeft);
         g.drawText (juce::String (owner.programsInCategory (row).size()), width - 44, 0, 32, height, juce::Justification::centredRight);
     }
 
@@ -67,8 +67,8 @@ public:
         if (row < 0 || row >= getNumRows())
             return;
 
-        paintRowBackground (g, width, height, selected);
         const auto& item = *programs[static_cast<size_t> (row)];
+        paintRowBackground (g, width, height, selected, theme::categoryColour (item.entry.categoryIndex));
 
         g.setFont (juce::FontOptions (14.0f));
         g.setColour (selected ? theme::text : theme::text.withAlpha (0.85f));
@@ -207,12 +207,19 @@ std::vector<const BrowserItem*> ListBrowserView::programsInCategory (int categor
     return result;
 }
 
+void ListBrowserView::paint (juce::Graphics& g)
+{
+    g.fillAll (theme::background);
+    g.setColour (theme::outline);
+    g.drawVerticalLine (categoryColumnWidth + 12, 12.0f, static_cast<float> (getHeight() - 12));
+}
+
 void ListBrowserView::resized()
 {
-    auto bounds = getLocalBounds();
-    categoryList.setBounds (bounds.removeFromLeft (categoryColumnWidth));
-    bounds.removeFromLeft (1);
-    programList.setBounds (bounds);
+    auto bounds = getLocalBounds().reduced (0, 12);
+    categoryList.setBounds (bounds.removeFromLeft (categoryColumnWidth).withTrimmedLeft (8));
+    bounds.removeFromLeft (25);
+    programList.setBounds (bounds.withTrimmedRight (12));
 }
 
 } // namespace lucky

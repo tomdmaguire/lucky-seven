@@ -6,12 +6,14 @@ namespace lucky
 
 namespace
 {
-constexpr float dotRadius = 5.5f;
-constexpr float minimumSpacing = 12.0f;
+constexpr float dotRadius = 4.0f;
+constexpr float glowRadius = 9.0f;
+constexpr float selectionRingRadius = 17.0f;
+constexpr float minimumSpacing = 11.0f;
 constexpr int relaxIterations = 60;
 constexpr float hitRadius = 10.0f;
-constexpr int legendHeight = 26;
-constexpr float axisMargin = 34.0f;
+constexpr int legendHeight = 30;
+constexpr float axisMargin = 40.0f;
 
 constexpr float rankWeight = 0.7f;
 constexpr float edgePadding = 0.03f;
@@ -68,7 +70,7 @@ juce::Rectangle<float> SoundMapView::plotArea() const
     area.removeFromBottom (static_cast<float> (legendHeight));
     area.removeFromBottom (axisMargin * 0.6f);
     area.removeFromLeft (axisMargin);
-    return area.reduced (12.0f);
+    return area.reduced (18.0f, 30.0f);
 }
 
 void SoundMapView::AxisScale::build (std::vector<float> logValues)
@@ -186,53 +188,62 @@ int SoundMapView::selectedDot() const
 
 void SoundMapView::paint (juce::Graphics& g)
 {
-    g.fillAll (theme::panel);
+    g.fillAll (theme::background);
     const auto area = plotArea();
 
     if (dots.empty())
     {
         g.setColour (theme::textDim);
-        g.setFont (juce::FontOptions (14.0f));
-        g.drawText (items.empty() ? "No IRs found - choose the IR folder above" : "Analysing IRs...",
+        g.setFont (theme::labelFont (13.0f));
+        g.drawText (items.empty() ? "NO IRS FOUND - CHOOSE THE IR FOLDER" : "ANALYSING IRS...",
                     getLocalBounds(), juce::Justification::centred);
         return;
     }
 
     paintAxes (g, area);
 
+    for (const auto& dot : dots)
+    {
+        g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (0.12f));
+        g.fillEllipse (juce::Rectangle<float> (glowRadius * 2.0f, glowRadius * 2.0f).withCentre (dot.position));
+    }
+
     for (size_t i = 0; i < dots.size(); ++i)
     {
         const auto& dot = dots[i];
         const auto hovered = static_cast<int> (i) == hoveredDot;
-        const auto colour = theme::categoryColour (dot.item->entry.categoryIndex);
-        const auto radius = hovered ? dotRadius + 1.5f : dotRadius;
-        g.setColour (colour.withAlpha (hovered ? 1.0f : 0.8f));
+        const auto radius = hovered ? dotRadius + 2.0f : dotRadius;
+        g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (hovered ? 1.0f : 0.9f));
         g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (dot.position));
     }
 
     if (const auto selected = selectedDot(); selected >= 0)
     {
         const auto& dot = dots[static_cast<size_t> (selected)];
-        const auto ringBounds = juce::Rectangle<float> (dotRadius * 4.0f, dotRadius * 4.0f).withCentre (dot.position);
-        g.setColour (theme::text);
-        g.drawEllipse (ringBounds, 2.0f);
+        const auto colour = theme::categoryColour (dot.item->entry.categoryIndex);
 
         if (decayRatio < 0.999f && dot.item->profile)
         {
             const auto shift = xForSeconds (dot.item->profile->midT60 * decayRatio) - xForSeconds (dot.item->profile->midT60);
             const auto ghost = dot.position.translated (shift, 0.0f);
-            g.setColour (theme::accent.withAlpha (0.7f));
-            const float dashes[] { 4.0f, 3.0f };
-            g.drawDashedLine ({ dot.position.translated (-dotRadius * 2.0f, 0.0f), ghost.translated (dotRadius * 1.5f, 0.0f) }, dashes, 2, 1.5f);
-            g.drawEllipse (juce::Rectangle<float> (dotRadius * 3.0f, dotRadius * 3.0f).withCentre (ghost), 1.5f);
+            g.setColour (colour.withAlpha (0.8f));
+            const float dashes[] { 3.0f, 3.0f };
+            g.drawDashedLine ({ dot.position.translated (-selectionRingRadius, 0.0f), ghost.translated (7.0f, 0.0f) }, dashes, 2, 1.2f);
+            g.drawEllipse (juce::Rectangle<float> (14.0f, 14.0f).withCentre (ghost), 1.2f);
         }
 
+        g.setColour (colour);
+        g.fillEllipse (juce::Rectangle<float> (dotRadius * 2.5f, dotRadius * 2.5f).withCentre (dot.position));
         g.setColour (theme::text);
-        g.setFont (juce::FontOptions (13.0f, juce::Font::bold));
-        const auto label = dot.item->entry.name;
-        const auto labelWidth = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), label) + 8.0f;
-        auto labelBounds = juce::Rectangle<float> (labelWidth, 18.0f).withCentre (dot.position.translated (0.0f, -dotRadius * 2.0f - 12.0f));
-        labelBounds = labelBounds.constrainedWithin (getLocalBounds().toFloat());
+        g.drawEllipse (juce::Rectangle<float> (selectionRingRadius * 2.0f, selectionRingRadius * 2.0f).withCentre (dot.position), 1.5f);
+
+        g.setFont (theme::labelFont (12.0f));
+        const auto label = dot.item->entry.name.toUpperCase();
+        const auto labelWidth = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), label) + 12.0f;
+        const auto above = dot.position.y - area.getY() > 40.0f;
+        auto labelBounds = juce::Rectangle<float> (labelWidth, 16.0f)
+                               .withCentre (dot.position.translated (0.0f, (selectionRingRadius + 11.0f) * (above ? -1.0f : 1.0f)));
+        labelBounds = labelBounds.constrainedWithin (getLocalBounds().toFloat().reduced (4.0f));
         g.drawText (label, labelBounds, juce::Justification::centred);
     }
 
@@ -241,7 +252,7 @@ void SoundMapView::paint (juce::Graphics& g)
 
 void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) const
 {
-    g.setFont (juce::FontOptions (11.0f));
+    g.setFont (theme::labelFont (10.0f));
 
     auto lastTickX = -minimumTickSpacing;
     for (const auto seconds : secondsTicks)
@@ -251,20 +262,19 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
             continue;
 
         lastTickX = x;
-
-        g.setColour (theme::outline.withAlpha (0.6f));
+        g.setColour (theme::grid);
         g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
-        g.setColour (theme::textDim);
+        g.setColour (theme::textDim.withAlpha (0.7f));
         g.drawText (theme::formatSeconds (seconds), juce::Rectangle<float> (60.0f, 14.0f).withCentre ({ x, area.getBottom() + 14.0f }),
                     juce::Justification::centred);
     }
 
     g.setColour (theme::textDim);
-    g.drawText ("decay", juce::Rectangle<float> (area.getRight() - 60.0f, area.getBottom() + 7.0f, 60.0f, 14.0f), juce::Justification::centredRight);
+    g.drawText ("DECAY", juce::Rectangle<float> (area.getRight() - 60.0f, area.getBottom() + 7.0f, 60.0f, 14.0f), juce::Justification::centredRight);
 
-    const auto labelArea = juce::Rectangle<float> (4.0f, area.getY(), axisMargin, area.getHeight());
-    g.drawText ("bright", labelArea.withHeight (14.0f), juce::Justification::centredLeft);
-    g.drawText ("dark", labelArea.withTrimmedTop (area.getHeight() - 14.0f), juce::Justification::centredLeft);
+    const auto labelArea = juce::Rectangle<float> (14.0f, area.getY(), axisMargin, area.getHeight());
+    g.drawText ("BRIGHT", labelArea.withHeight (14.0f), juce::Justification::centredLeft);
+    g.drawText ("DARK", labelArea.withTrimmedTop (area.getHeight() - 14.0f), juce::Justification::centredLeft);
 }
 
 void SoundMapView::paintLegend (juce::Graphics& g) const
@@ -274,17 +284,24 @@ void SoundMapView::paintLegend (juce::Graphics& g) const
         if (categories.empty() || categories.back().first != item.entry.categoryIndex)
             categories.emplace_back (item.entry.categoryIndex, item.entry.category);
 
-    auto legend = getLocalBounds().removeFromBottom (legendHeight).reduced (12, 4);
-    g.setFont (juce::FontOptions (12.0f));
-    const auto slotWidth = categories.empty() ? 0 : legend.getWidth() / static_cast<int> (categories.size());
+    g.setFont (theme::labelFont (10.0f));
+    constexpr auto gap = 22.0f;
+    auto totalWidth = 0.0f;
+    for (const auto& [index, name] : categories)
+        totalWidth += 14.0f + juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), name.toUpperCase()) + gap;
+
+    auto legend = getLocalBounds().removeFromBottom (legendHeight).toFloat();
+    auto x = legend.getCentreX() - (totalWidth - gap) * 0.5f;
 
     for (const auto& [index, name] : categories)
     {
-        auto slot = legend.removeFromLeft (slotWidth);
+        const auto text = name.toUpperCase();
+        const auto width = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), text);
         g.setColour (theme::categoryColour (index));
-        g.fillEllipse (slot.removeFromLeft (14).withSizeKeepingCentre (8, 8).toFloat());
+        g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre ({ x + 3.0f, legend.getCentreY() }));
         g.setColour (theme::textDim);
-        g.drawText (name, slot, juce::Justification::centredLeft);
+        g.drawText (text, juce::Rectangle<float> (x + 12.0f, legend.getY(), width + 4.0f, legend.getHeight()), juce::Justification::centredLeft);
+        x += 14.0f + width + gap;
     }
 }
 

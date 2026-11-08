@@ -4,6 +4,7 @@
 #include "ui/BrowserPanel.h"
 #include "ui/EqView.h"
 #include "ui/LookAndFeel.h"
+#include "ui/Theme.h"
 
 class LuckySevenEditor final : public juce::AudioProcessorEditor,
                                private juce::ChangeListener,
@@ -19,7 +20,7 @@ public:
 private:
     struct Knob
     {
-        juce::Slider slider { juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::TextBoxBelow };
+        juce::Slider slider { juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox };
         juce::Label label;
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
     };
@@ -28,20 +29,27 @@ private:
     void timerCallback() override;
     void refreshItems();
     void chooseFolder();
+    void stepProgram (int delta);
+    void setView (lucky::BrowserPanel::View view);
+    void applyAccent();
+    void setupLabel (juce::Label& label, const juce::String& text);
     void setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name);
-    juce::String headerText() const;
+    const lucky::BrowserItem* selectedItem() const;
 
     LuckySevenProcessor& audioProcessor;
     lucky::LuckyLookAndFeel lookAndFeel;
     juce::TooltipWindow tooltips { this, 400 };
     lucky::BrowserPanel browser;
-    juce::TextButton folderButton { "IR folder..." };
+    juce::TextButton mapTab { "MAP" }, listTab { "LIST" };
+    juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
+    juce::DrawableButton folderButton { "IR folder", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, mix;
     lucky::EqView eq;
     juce::Label eqLabel;
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;
+    juce::Colour accent { lucky::theme::accent };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenEditor)
 };

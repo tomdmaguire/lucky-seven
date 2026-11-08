@@ -12,7 +12,7 @@ constexpr float topDb = 6.0f;
 constexpr float bottomDb = -30.0f;
 constexpr float minWidthOctaves = 1.0f;
 constexpr int filterOrder = 4;
-constexpr float dotRadius = 9.0f;
+constexpr float dotRadius = 7.0f;
 constexpr float pixelsPerOctaveOfWidth = 12.0f;
 
 const float maxWidthOctaves = std::log2 (maxHz / minHz);
@@ -78,8 +78,8 @@ juce::Point<float> EqView::dotPosition() const
 void EqView::paint (juce::Graphics& g)
 {
     const auto area = plotArea();
-    g.setColour (theme::panel);
-    g.fillRoundedRectangle (getLocalBounds().toFloat(), 6.0f);
+    g.setColour (theme::background);
+    g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);
 
     g.setFont (juce::FontOptions (10.0f));
     for (const auto hertz : gridFrequencies)
@@ -114,21 +114,32 @@ void EqView::paint (juce::Graphics& g)
     fill.lineTo (area.getBottomRight());
     fill.lineTo (area.getBottomLeft());
     fill.closeSubPath();
-    g.setColour (theme::accent.withAlpha (0.08f));
+    g.setColour (accent.withAlpha (0.1f));
     g.fillPath (fill);
 
-    g.setColour (juce::Colour (0xff3fc6d6));
-    g.strokePath (curve, juce::PathStrokeType (2.0f));
+    g.setColour (accent);
+    g.strokePath (curve, juce::PathStrokeType (1.8f));
 
     const auto dot = dotPosition();
-    g.setColour (theme::accent.withAlpha (dragging ? 1.0f : 0.9f));
+    g.setColour (accent.withAlpha (0.2f));
+    g.fillEllipse (juce::Rectangle<float> (dotRadius * 3.0f, dotRadius * 3.0f).withCentre (dot));
+    g.setColour (dragging ? accent.brighter (0.3f) : accent);
     g.fillEllipse (juce::Rectangle<float> (dotRadius * 2.0f, dotRadius * 2.0f).withCentre (dot));
 
     g.setColour (theme::textDim);
-    g.setFont (juce::FontOptions (11.0f));
+    g.setFont (theme::labelFont (10.0f));
     const auto readout = (lowHz <= minHz + 0.5f ? juce::String ("--") : formatHz (lowHz)) + " - "
                        + (highHz >= maxHz - 1.0f ? juce::String ("--") : formatHz (highHz)) + " Hz";
     g.drawText (readout, area.reduced (6.0f, 3.0f), juce::Justification::topRight);
+}
+
+void EqView::setAccent (juce::Colour colour)
+{
+    if (colour != accent)
+    {
+        accent = colour;
+        repaint();
+    }
 }
 
 void EqView::setBand (float centreLog2, float widthOctaves)
