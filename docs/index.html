@@ -101,6 +101,9 @@
   .manual summary { cursor: pointer; color: var(--text); font-family: var(--display); font-weight: 600; letter-spacing: 0.03em; font-size: 17px; }
   .manual[open] summary { margin-bottom: 8px; }
   .manual p { margin: 8px 0; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 40px; align-items: center; }
+  .split-text p { color: var(--dim); margin: 0 0 12px; }
+  .split-text p strong { color: var(--text); font-weight: 500; }
   .notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; color: var(--dim); }
   .notes h3 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: 0.03em; color: var(--text); margin: 0 0 4px; }
   .notes p { margin: 0; }
@@ -112,7 +115,7 @@
   @media (max-width: 860px) {
     .hero { grid-template-columns: minmax(0, 1fr); padding-top: 48px; gap: 24px; }
     .digit { order: -1; width: 150px; justify-self: start; }
-    .features, .gallery, .notes { grid-template-columns: minmax(0, 1fr); }
+    .features, .gallery, .notes, .split { grid-template-columns: minmax(0, 1fr); }
     nav { gap: 16px; }
   }
   @media (max-width: 520px) {
@@ -127,6 +130,7 @@
     <a class="brand" href="#top"><img src="assets/logo.svg" alt=""><span>LUCKY SEVEN</span></a>
     <nav aria-label="Sections">
       <a class="optional" href="#features">Features</a>
+      <a class="optional" href="#ableton">Ableton</a>
       <a href="#install">Install</a>
       <a href="https://github.com/tomdmaguire/lucky-seven">GitHub</a>
     </nav>
@@ -176,11 +180,11 @@
       <div class="features">
         <div class="feature" style="--dot: var(--sage)">
           <h3>Every reverb on a map</h3>
-          <p>Each impulse response is placed by how long its tail lasts and how bright it sounds, so you find the right sound by ear instead of by name. There's a searchable list and favourites too.</p>
+          <p>Each impulse response is placed by how long its tail lasts and how bright it sounds, so you find the right sound by ear instead of by name. Search and category filters narrow it down, and there's a list view and favourites too.</p>
         </div>
         <div class="feature" style="--dot: var(--rose)">
           <h3>Bring your own IRs</h3>
-          <p>Drop in any WAV, AIFF or FLAC impulse responses: your own captures, free packs, whole libraries. Each folder becomes its own category on the map, and every control works on them.</p>
+          <p>Add as many folders of WAV, AIFF or FLAC impulse responses as you like: your own captures, free packs, whole libraries. Each subfolder becomes a category on the map, left/right file pairs play in true stereo, and every control works on them.</p>
         </div>
         <div class="feature" style="--dot: var(--brick)">
           <h3>A decay knob that keeps the character</h3>
@@ -212,6 +216,28 @@
         <figure class="shot">
           <img src="assets/map-spaces.png" width="1800" height="1200" loading="lazy" alt="The sound map with Europa, one of the longest spaces, selected.">
           <figcaption>Europa, one of the longest spaces, out on the right of the map.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="ableton">
+    <div class="wrap">
+      <span class="label">Using Ableton Live?</span>
+      <h2>Add Ableton's Convolution Reverb IRs too.</h2>
+      <div class="split">
+        <div class="split-text">
+          <p>If you have Ableton's <strong>Convolution Reverb</strong> pack, its 480-odd impulse responses (real places, halls, plates, springs, drum rooms and some genuinely strange spaces) can sit on the same map as the Bricasti set.</p>
+          <p>In Lucky Seven, open the <strong>&middot;&middot;&middot;</strong> menu, choose <strong>IR folders &rarr; Add a folder&hellip;</strong> and pick:</p>
+          <div class="command">
+            <pre id="ableton-path">~/Music/Ableton/Factory Packs/Convolution Reverb/IRs</pre>
+            <button type="button" data-copy="ableton-path">Copy</button>
+          </div>
+          <p>Press <code>Cmd</code> + <code>Shift</code> + <code>G</code> in the folder dialog and paste that path to jump straight there. Lucky Seven tidies the pack's numbered folders into categories, merges its halls with the Bricasti halls, and plays its left/right file pairs in true stereo.</p>
+        </div>
+        <figure class="shot">
+          <img src="assets/with-ableton.png" width="1800" height="1200" loading="lazy" alt="The sound map with the Bricasti set and Ableton's Convolution Reverb pack loaded together: over 600 programs in 16 categories, with German Concert Hall selected.">
+          <figcaption>The Bricasti set and Ableton's pack on one map: over 600 reverbs.</figcaption>
         </figure>
       </div>
     </div>
@@ -273,7 +299,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.
         </div>
         <div>
           <h3>Formats</h3>
-          <p>VST3 and Audio Unit, built for Apple Silicon and Intel Macs running macOS 13 or newer. Impulse responses can be mono, stereo or true-stereo (4-channel), up to 30 seconds long. After adding your own, choose Rescan IR folder from the &middot;&middot;&middot; menu.</p>
+          <p>VST3 and Audio Unit, built for Apple Silicon and Intel Macs running macOS 13 or newer. Impulse responses can be mono, stereo, true-stereo (4-channel) or left/right file pairs, up to 30 seconds long. Manage your folders from the &middot;&middot;&middot; menu under IR folders.</p>
         </div>
         <div>
           <h3>Open source</h3>
