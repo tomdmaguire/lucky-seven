@@ -3,7 +3,7 @@
 
 namespace
 {
-const juce::String defaultIrId { "Halls/01 Large Hall" };
+const juce::String defaultIrId { "Chambers/17 Sunset Chamber" };
 } // namespace
 
 LuckySevenProcessor::LuckySevenProcessor()
