@@ -3,3 +3,4 @@ build/
 *.xcodeproj/
 .cache/
 compile_commands.json
+IRs/
