@@ -359,44 +359,47 @@ void LuckySevenView::timerCallback()
 
 void LuckySevenView::showMenu()
 {
-    enum { rescanItem = 1, chooseItem, revealItem };
-    const auto root = audioProcessor.getCatalogue().getRoot();
+    auto& catalogue = audioProcessor.getCatalogue();
+    const auto root = catalogue.getRoot();
 
-    juce::PopupMenu menu;
-    menu.addSectionHeader (juce::String ("Lucky Seven v") + JucePlugin_VersionString);
-    menu.addSectionHeader ("IR folder: " + root.getFullPathName());
-    menu.addItem (rescanItem, "Rescan IR folder");
-    menu.addItem (chooseItem, "Choose IR folder...");
-    menu.addItem (revealItem, "Show in Finder", root.exists());
-    menu.addSeparator();
+    juce::PopupMenu folders;
+    folders.addItem ("Add a folder...", [this] { chooseFolder(); });
+    folders.addItem ("Rescan all folders", [&catalogue] { catalogue.rescan(); });
+    folders.addSeparator();
+
+    juce::PopupMenu mainFolder;
+    mainFolder.addItem ("Show in Finder", root.exists(), false, [root] { root.revealToUser(); });
+    folders.addSubMenu (root.getFullPathName() + " (main)", mainFolder);
+
+    for (const auto& extra : catalogue.getExtraRoots())
+    {
+        juce::PopupMenu actions;
+        actions.addItem ("Show in Finder", extra.exists(), false, [extra] { extra.revealToUser(); });
+        actions.addItem ("Remove from Lucky Seven", [&catalogue, extra] { catalogue.removeRoot (extra); });
+        folders.addSubMenu (extra.getFullPathName() + (extra.isDirectory() ? juce::String() : " (missing)"), actions);
+    }
 
     juce::PopupMenu sizes;
     const auto scale = getScale != nullptr ? getScale() : 1.0f;
     for (const auto preset : scalePresets)
         sizes.addItem (juce::String (juce::roundToInt (preset * 100.0f)) + "%", true, std::abs (scale - preset) < 0.01f,
                        [this, preset] { if (onScaleRequested != nullptr) onScaleRequested (preset); });
-    menu.addSubMenu ("Window size", sizes);
-    menu.addSeparator();
-    menu.addItem ("Download Bricasti IRs (" + juce::String (lucky::IrDownloader::bricastiArchiveMegabytes) + " MB)",
-                  ! audioProcessor.getCatalogue().getDownloader().isBusy(),
-                  false,
-                  [this] { audioProcessor.getCatalogue().downloadBricastiIrs(); });
 
-    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton),
-                        [this, root] (int result)
-                        {
-                            if (result == rescanItem)
-                                audioProcessor.getCatalogue().rescan();
-                            else if (result == chooseItem)
-                                chooseFolder();
-                            else if (result == revealItem)
-                                root.revealToUser();
-                        });
+    juce::PopupMenu menu;
+    menu.addSectionHeader (juce::String ("Lucky Seven v") + JucePlugin_VersionString);
+    menu.addSubMenu ("IR folders", folders);
+    menu.addItem ("Download Bricasti IRs (" + juce::String (lucky::IrDownloader::bricastiArchiveMegabytes) + " MB)",
+                  ! catalogue.getDownloader().isBusy(), false, [&catalogue] { catalogue.downloadBricastiIrs(); });
+    menu.addSeparator();
+    menu.addSubMenu ("Window size", sizes);
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton));
 }
 
 void LuckySevenView::chooseFolder()
 {
-    chooser = std::make_unique<juce::FileChooser> ("Choose an IR folder", audioProcessor.getCatalogue().getRoot(), juce::String(), true, true);
+    chooser = std::make_unique<juce::FileChooser> ("Add an IR folder", juce::File::getSpecialLocation (juce::File::userMusicDirectory),
+                                                   juce::String(), true, true);
     chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
                           [this] (const juce::FileChooser& fileChooser)
                           {
@@ -404,7 +407,7 @@ void LuckySevenView::chooseFolder()
                               if (folder == juce::File())
                                   return;
 
-                              audioProcessor.getCatalogue().setRoot (folder);
+                              audioProcessor.getCatalogue().addRoot (folder);
                               audioProcessor.selectIr (audioProcessor.getSelectedIrId());
                           });
 }

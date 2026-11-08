@@ -2,6 +2,7 @@
 
 #include "ReverbEngine.h"
 #include "ir/IrAnalysis.h"
+#include "ir/IrLibrary.h"
 #include <juce_core/juce_core.h>
 
 namespace lucky
@@ -17,8 +18,8 @@ public:
     IrLoader (ReverbEngine& engineToFeed, std::atomic<float>& decayPercentSource);
     ~IrLoader() override;
 
-    /** Requests a new IR file; safe to call from any non-audio thread. */
-    void requestFile (const juce::File& file);
+    /** Requests a program at the file closest to the host rate; safe to call from any non-audio thread. */
+    void requestEntry (const IrEntry& entry, double hostSampleRate);
 
     /** Forces a rebuild, e.g. after the host sample rate changes. */
     void invalidate();
@@ -28,14 +29,14 @@ public:
 
 private:
     void run() override;
-    void loadFile (const juce::File& file);
+    void loadEntry (const IrEntry& entry, double hostSampleRate);
     void install (float ratio);
 
     ReverbEngine& engine;
     std::atomic<float>& decayPercent;
     juce::CriticalSection requestLock;
-    juce::File pendingFile;
-    bool fileDirty = false;
+    std::optional<IrEntry> pendingEntry;
+    double pendingRate = 48000.0;
     std::atomic<bool> forceRebuild { false };
     std::atomic<float> originalT60 { 0.0f };
 

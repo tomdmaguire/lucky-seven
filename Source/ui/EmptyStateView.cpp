@@ -116,7 +116,7 @@ void EmptyStateView::resized()
     cancelButton.setBounds (primary.withLeft (primary.getRight() - cancelWidth));
 
     auto row = primary.translated (0, buttonHeight + 34);
-    const auto widths = std::array<int, 3> { 140, 200, 100 };
+    const auto widths = std::array<int, 3> { 140, 150, 100 };
     const auto gap = 10;
     auto x = row.getCentreX() - (widths[0] + widths[1] + widths[2] + gap * 2) / 2;
     for (auto [button, width] : { std::pair { &openButton, widths[0] }, std::pair { &chooseButton, widths[1] }, std::pair { &rescanButton, widths[2] } })

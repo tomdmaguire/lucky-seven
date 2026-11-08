@@ -25,12 +25,17 @@ struct IrEntry
     int number = 0;
     juce::String name;
     std::map<int, juce::File> filesByRate;
+    juce::File rightFile;
+    juce::String uniqueSuffix;
 
-    /** Stable identifier saved with the plugin state, e.g. "Halls/04 Large & Near" or "My Rooms/Kitchen". */
+    /** Stable identifier saved with the plugin state, e.g. "Halls/04 Large & Near" or "Real Places/Kitchen". */
     juce::String id() const;
 
-    /** File whose sample rate is closest to the given rate. */
+    /** File whose sample rate is closest to the given rate (the left-input file for L/R pairs). */
     juce::File fileForRate (double sampleRate) const;
+
+    /** True when this program is a pair of files holding the responses to the left and right inputs. */
+    bool isPair() const { return rightFile != juce::File(); }
 };
 
 /** A true-stereo impulse response: the stereo response to the left input and to the right input. */
@@ -53,12 +58,23 @@ std::optional<ParsedIrName> parseIrFileName (const juce::String& fileName);
 /** True for Samplicity's left/right split files, which duplicate the quad files and are skipped. */
 bool isSamplicitySplitFile (const juce::String& fileName);
 
-/** Recursively scans root: Samplicity quad IRs keep their categories and merge sample-rate variants; any other audio
-    file is categorised by its first subfolder ("User" for loose files). Sorted by category, number, then name. */
+/** Category name shown to the user: leading numbering such as "05 " or "07_" is removed. */
+juce::String displayCategoryName (const juce::String& folderName);
+
+/** Recursively scans every root. Samplicity quad IRs keep their categories and merge sample-rate variants. Any other
+    audio file is categorised by its first subfolder (or by the root's own name if loose), files ending " L"/" R" are
+    combined into one true-stereo program, and categories with the same display name merge across roots.
+    Sorted by category, number, then name. */
+std::vector<IrEntry> scanLibrary (const juce::Array<juce::File>& roots);
+
+/** Single-root convenience overload of scanLibrary. */
 std::vector<IrEntry> scanLibrary (const juce::File& root);
 
-/** Reads a WAV file into a buffer; returns an empty buffer on failure. */
+/** Reads an audio file into a buffer; returns an empty buffer on failure. */
 juce::AudioBuffer<float> readIrFile (const juce::File& file, double& sampleRateOut);
+
+/** Reads a program at the file closest to sampleRate; L/R pairs become one 4-channel LL/LR/RL/RR buffer. */
+juce::AudioBuffer<float> readIrEntry (const IrEntry& entry, double sampleRate, double& sampleRateOut);
 
 /** Splits a 4-channel LL/LR/RL/RR buffer into a true-stereo pair; 1-2 channel IRs become a channel-parallel pair. */
 TrueStereoIr splitTrueStereo (const juce::AudioBuffer<float>& ir, double sampleRate);

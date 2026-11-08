@@ -22,11 +22,11 @@ IrLoader::~IrLoader()
     stopThread (5000);
 }
 
-void IrLoader::requestFile (const juce::File& file)
+void IrLoader::requestEntry (const IrEntry& entry, double hostSampleRate)
 {
     const juce::ScopedLock scope (requestLock);
-    pendingFile = file;
-    fileDirty = true;
+    pendingEntry = entry;
+    pendingRate = hostSampleRate;
     notify();
 }
 
@@ -45,14 +45,12 @@ void IrLoader::run()
     {
         wait (pollIntervalMs);
 
-        juce::File fileToLoad;
+        std::optional<IrEntry> entryToLoad;
+        double rateToLoad = 48000.0;
         {
             const juce::ScopedLock scope (requestLock);
-            if (fileDirty)
-            {
-                fileToLoad = pendingFile;
-                fileDirty = false;
-            }
+            entryToLoad = std::exchange (pendingEntry, std::nullopt);
+            rateToLoad = pendingRate;
         }
 
         const auto ratio = juce::jlimit (0.1f, 1.0f, decayPercent.load() / 100.0f);
@@ -63,9 +61,9 @@ void IrLoader::run()
             stableSinceMs = now;
         }
 
-        if (fileToLoad != juce::File())
+        if (entryToLoad)
         {
-            loadFile (fileToLoad);
+            loadEntry (*entryToLoad, rateToLoad);
             install (ratio);
             continue;
         }
@@ -78,10 +76,10 @@ void IrLoader::run()
     }
 }
 
-void IrLoader::loadFile (const juce::File& file)
+void IrLoader::loadEntry (const IrEntry& entry, double hostSampleRate)
 {
     double rate = 0.0;
-    auto buffer = readIrFile (file, rate);
+    auto buffer = readIrEntry (entry, hostSampleRate, rate);
     if (buffer.getNumSamples() == 0)
         return;
 
@@ -93,6 +91,7 @@ void IrLoader::loadFile (const juce::File& file)
         buffer.applyGainRamp (maxSamples - fade, fade, 1.0f, 0.0f);
     }
 
+    trimNoiseFloor (buffer, rate);
     normaliseEnergy (buffer);
     trimTail (buffer, rate);
     profile = analyse (buffer, rate);

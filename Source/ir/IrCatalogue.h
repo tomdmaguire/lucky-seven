@@ -21,11 +21,20 @@ public:
     IrCatalogue();
     ~IrCatalogue() override;
 
-    /** The folder containing the IRs, persisted across sessions. */
+    /** The main IR folder (~/Music/Lucky Seven/IRs); downloads go here. */
     juce::File getRoot() const;
 
-    /** Changes the IR folder, rescans and restarts analysis. */
-    void setRoot (const juce::File& newRoot);
+    /** Every folder scanned for IRs: the main folder first, then any the user added. */
+    juce::Array<juce::File> getRoots() const;
+
+    /** Folders the user added on top of the main one. */
+    juce::Array<juce::File> getExtraRoots() const;
+
+    /** Adds a folder to scan (ignored if already present) and rescans. */
+    void addRoot (const juce::File& folder);
+
+    /** Stops scanning a folder the user added and rescans. */
+    void removeRoot (const juce::File& folder);
 
     /** Re-reads the IR folder to pick up added, removed or renamed files, then re-analyses anything new. */
     void rescan();
@@ -65,7 +74,8 @@ private:
     void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void loadCache();
     void saveCache() const;
-    static juce::String cacheKey (const juce::File& file);
+    static juce::String cacheKey (const IrEntry& entry);
+    void storeExtraRoots (const juce::Array<juce::File>& folders);
 
     mutable juce::ApplicationProperties settings;
     mutable juce::CriticalSection lock;

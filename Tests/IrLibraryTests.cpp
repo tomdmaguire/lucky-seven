@@ -30,7 +30,7 @@ public:
         expect (! lucky::parseIrFileName ("readme.wav").has_value());
 
         beginTest ("builds stable ids");
-        lucky::IrEntry entry { 1, "Halls", 4, "Large & Near", {} };
+        lucky::IrEntry entry { 1, "Halls", 4, "Large & Near", {}, {}, {} };
         expectEquals (entry.id(), juce::String ("Halls/04 Large & Near"));
 
         beginTest ("picks the closest sample rate");
@@ -78,7 +78,7 @@ public:
 
         beginTest ("merges Samplicity rates, skips split files and adds custom folders");
         expectEquals (ids.joinIntoString (" | "),
-                      juce::String ("Halls/01 Large Hall | Halls/Garage Hall | My Rooms/Kitchen | My Rooms/Small/Bathroom | User/Loose"));
+                      "Halls/01 Large Hall | Halls/Garage Hall | My Rooms/Kitchen | My Rooms/Small/Bathroom | " + root.getFileName() + "/Loose");
 
         beginTest ("custom folders get custom category indices; matching names join the Bricasti category");
         expectEquals (entries[0].filesByRate.size(), static_cast<size_t> (2));
@@ -87,9 +87,57 @@ public:
         expect (entries[2].fileForRate (48000.0).existsAsFile());
 
         root.deleteRecursively();
+
+        testMultipleRootsAndPairs();
     }
 
 private:
+    void testMultipleRootsAndPairs()
+    {
+        const auto workspace = juce::File::createTempFile ("lucky-seven-roots");
+        const auto bricasti = workspace.getChildFile ("Bricasti");
+        const auto ableton = workspace.getChildFile ("Ableton IRs");
+        const auto mine = workspace.getChildFile ("Mine");
+
+        writeWav (bricasti.getChildFile ("quad/1 Halls 01 Large Hall, 48K.wav"), 4);
+        writeWav (ableton.getChildFile ("05 Halls/German Concert Hall L.aif"), 2);
+        writeWav (ableton.getChildFile ("05 Halls/German Concert Hall R.aif"), 2);
+        writeWav (ableton.getChildFile ("01 Real Places/Kitchen.wav"), 2);
+        writeWav (ableton.getChildFile ("01 Real Places/Orphan L.wav"), 2);
+        writeWav (ableton.getChildFile ("09 Springs/Mono Spring_L.wav"), 1);
+        writeWav (ableton.getChildFile ("09 Springs/Mono Spring_R.wav"), 1);
+        writeWav (mine.getChildFile ("Real Places/Kitchen.wav"), 2);
+
+        const auto entries = lucky::scanLibrary (juce::Array<juce::File> { bricasti, ableton, mine });
+        juce::StringArray ids;
+        for (const auto& entry : entries)
+            ids.add (entry.id());
+
+        beginTest ("strips numbering, merges categories by name across folders and pairs L/R files");
+        expectEquals (ids.joinIntoString (" | "),
+                      juce::String ("Halls/01 Large Hall | Halls/German Concert Hall | Real Places/Kitchen | Real Places/Kitchen (2) | "
+                                    "Real Places/Orphan L | Springs/Mono Spring"));
+
+        const auto find = [&] (const juce::String& id)
+        {
+            return *std::find_if (entries.begin(), entries.end(), [&] (const auto& e) { return e.id() == id; });
+        };
+
+        beginTest ("an L/R pair loads as one 4-channel true-stereo program");
+        double rate = 0.0;
+        const auto hall = lucky::readIrEntry (find ("Halls/German Concert Hall"), 48000.0, rate);
+        expectEquals (hall.getNumChannels(), 4);
+
+        beginTest ("a mono L/R pair loads as stereo");
+        expectEquals (lucky::readIrEntry (find ("Springs/Mono Spring"), 48000.0, rate).getNumChannels(), 2);
+
+        beginTest ("keeps the original folder order for custom categories");
+        expectLessThan (find ("Real Places/Kitchen").categoryIndex, find ("Springs/Mono Spring").categoryIndex);
+        expectEquals (find ("Halls/German Concert Hall").categoryIndex, 1);
+
+        workspace.deleteRecursively();
+    }
+
     static void writeWav (const juce::File& file, int channels)
     {
         file.getParentDirectory().createDirectory();

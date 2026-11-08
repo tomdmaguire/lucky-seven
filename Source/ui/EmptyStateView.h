@@ -34,7 +34,7 @@ private:
     juce::File folder;
     IrDownloader::Status downloadStatus;
     juce::TextButton downloadButton, cancelButton { "CANCEL" }, openButton { "OPEN IR FOLDER" },
-        chooseButton { "CHOOSE ANOTHER FOLDER..." }, rescanButton { "RESCAN" };
+        chooseButton { "ADD A FOLDER..." }, rescanButton { "RESCAN" };
 };
 
 } // namespace lucky

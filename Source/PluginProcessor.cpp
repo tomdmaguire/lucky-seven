@@ -213,7 +213,7 @@ juce::String LuckySevenProcessor::getSelectedIrId() const
 void LuckySevenProcessor::requestSelectedFile()
 {
     if (const auto entry = catalogue->findEntry (getSelectedIrId()))
-        loader->requestFile (entry->fileForRate (hostSampleRate));
+        loader->requestEntry (*entry, hostSampleRate);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()

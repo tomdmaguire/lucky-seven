@@ -5,7 +5,8 @@ namespace lucky
 
 namespace
 {
-const juce::Identifier rootKey { "irRoot" };
+const juce::String legacyRootKey { "irRoot" };
+const juce::String extraRootsKey { "irRoots" };
 const juce::String favouritesKey { "favourites" };
 const juce::String uiScaleKey { "uiScale" };
 
@@ -62,6 +63,14 @@ IrCatalogue::IrCatalogue() : juce::Thread ("Lucky Seven IR analysis")
         if (id.isNotEmpty())
             favourites.insert (id);
 
+    if (const auto legacy = settings.getUserSettings()->getValue (legacyRootKey); legacy.isNotEmpty())
+    {
+        if (juce::File (legacy) != defaultRoot())
+            storeExtraRoots ({ juce::File (legacy) });
+        settings.getUserSettings()->removeValue (legacyRootKey);
+        settings.saveIfNeeded();
+    }
+
     loadCache();
     rescan();
     downloader.addChangeListener (this);
@@ -82,19 +91,56 @@ juce::File IrCatalogue::getRoot() const
 {
     if (const auto override = juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_IR_ROOT_OVERRIDE", {}); override.isNotEmpty())
         return juce::File (override);
-
-    const juce::ScopedLock scope (lock);
-    const auto stored = settings.getUserSettings()->getValue (rootKey.toString());
-    return stored.isNotEmpty() ? juce::File (stored) : defaultRoot();
+    return defaultRoot();
 }
 
-void IrCatalogue::setRoot (const juce::File& newRoot)
+juce::Array<juce::File> IrCatalogue::getExtraRoots() const
 {
-    {
-        const juce::ScopedLock scope (lock);
-        settings.getUserSettings()->setValue (rootKey.toString(), newRoot.getFullPathName());
-        settings.saveIfNeeded();
-    }
+    if (juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_IR_ROOT_OVERRIDE", {}).isNotEmpty())
+        return {};
+
+    const juce::ScopedLock scope (lock);
+    juce::Array<juce::File> folders;
+    for (const auto& path : juce::StringArray::fromLines (settings.getUserSettings()->getValue (extraRootsKey)))
+        if (path.isNotEmpty())
+            folders.addIfNotAlreadyThere (juce::File (path));
+    return folders;
+}
+
+juce::Array<juce::File> IrCatalogue::getRoots() const
+{
+    auto roots = getExtraRoots();
+    roots.insert (0, getRoot());
+    return roots;
+}
+
+void IrCatalogue::storeExtraRoots (const juce::Array<juce::File>& folders)
+{
+    juce::StringArray paths;
+    for (const auto& folder : folders)
+        paths.add (folder.getFullPathName());
+
+    const juce::ScopedLock scope (lock);
+    settings.getUserSettings()->setValue (extraRootsKey, paths.joinIntoString ("\n"));
+    settings.saveIfNeeded();
+}
+
+void IrCatalogue::addRoot (const juce::File& folder)
+{
+    auto folders = getExtraRoots();
+    if (folder == getRoot() || folder.isAChildOf (getRoot()) || folders.contains (folder))
+        return;
+
+    folders.add (folder);
+    storeExtraRoots (folders);
+    rescan();
+}
+
+void IrCatalogue::removeRoot (const juce::File& folder)
+{
+    auto folders = getExtraRoots();
+    folders.removeAllInstancesOf (folder);
+    storeExtraRoots (folders);
     rescan();
 }
 
@@ -175,7 +221,7 @@ void IrCatalogue::rescan()
     if (root == defaultRoot() && ! root.exists())
         root.createDirectory();
 
-    auto scanned = scanLibrary (root);
+    auto scanned = scanLibrary (getRoots());
 
     {
         const juce::ScopedLock scope (lock);
@@ -196,8 +242,7 @@ void IrCatalogue::run()
         if (threadShouldExit())
             return;
 
-        const auto file = entry.fileForRate (analysisRate);
-        const auto key = cacheKey (file);
+        const auto key = cacheKey (entry);
         std::optional<DecayProfile> profile;
 
         {
@@ -209,7 +254,7 @@ void IrCatalogue::run()
         if (! profile)
         {
             double sampleRate = 0.0;
-            const auto buffer = readIrFile (file, sampleRate);
+            const auto buffer = readIrEntry (entry, analysisRate, sampleRate);
             if (buffer.getNumSamples() == 0)
                 continue;
 
@@ -230,10 +275,16 @@ void IrCatalogue::run()
         saveCache();
 }
 
-juce::String IrCatalogue::cacheKey (const juce::File& file)
+juce::String IrCatalogue::cacheKey (const IrEntry& entry)
 {
-    return file.getFullPathName() + "|" + juce::String (file.getSize()) + "|"
-         + juce::String (file.getLastModificationTime().toMilliseconds());
+    const auto describe = [] (const juce::File& file)
+    {
+        return file.getFullPathName() + "|" + juce::String (file.getSize()) + "|"
+             + juce::String (file.getLastModificationTime().toMilliseconds());
+    };
+
+    const auto key = describe (entry.fileForRate (analysisRate));
+    return entry.isPair() ? key + "|" + describe (entry.rightFile) : key;
 }
 
 void IrCatalogue::loadCache()
