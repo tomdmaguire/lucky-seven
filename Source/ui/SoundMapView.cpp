@@ -13,7 +13,11 @@ constexpr float hitRadius = 10.0f;
 constexpr int legendHeight = 26;
 constexpr float axisMargin = 34.0f;
 
-const std::array<float, 8> secondsTicks { 0.25f, 0.5f, 1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f };
+constexpr float rankWeight = 0.7f;
+constexpr float edgePadding = 0.03f;
+constexpr float minimumTickSpacing = 44.0f;
+
+const std::array<float, 12> secondsTicks { 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 4.0f, 6.0f, 8.0f, 16.0f };
 } // namespace
 
 SoundMapView::SoundMapView (SelectionCallback callback) : onSelect (std::move (callback))
@@ -26,27 +30,18 @@ void SoundMapView::setItems (std::vector<BrowserItem> newItems)
 {
     items = std::move (newItems);
 
-    auto secondsMin = std::numeric_limits<float>::max(), secondsMax = 0.0f;
-    auto brightMin = std::numeric_limits<float>::max(), brightMax = 0.0f;
-
+    std::vector<float> logSeconds, logBrightness;
     for (const auto& item : items)
     {
         if (! item.profile || item.profile->midT60 <= 0.0f || item.profile->brightnessHz <= 0.0f)
             continue;
 
-        secondsMin = std::min (secondsMin, std::log (item.profile->midT60));
-        secondsMax = std::max (secondsMax, std::log (item.profile->midT60));
-        brightMin = std::min (brightMin, std::log (item.profile->brightnessHz));
-        brightMax = std::max (brightMax, std::log (item.profile->brightnessHz));
+        logSeconds.push_back (std::log (item.profile->midT60));
+        logBrightness.push_back (std::log (item.profile->brightnessHz));
     }
 
-    if (secondsMax > secondsMin)
-    {
-        const auto secondsPad = (secondsMax - secondsMin) * 0.05f;
-        const auto brightPad = std::max ((brightMax - brightMin) * 0.08f, 0.05f);
-        logSecondsRange = { secondsMin - secondsPad, secondsMax + secondsPad };
-        logBrightnessRange = { brightMin - brightPad, brightMax + brightPad };
-    }
+    secondsScale.build (std::move (logSeconds));
+    brightnessScale.build (std::move (logBrightness));
 
     layoutDots();
     repaint();
@@ -76,18 +71,49 @@ juce::Rectangle<float> SoundMapView::plotArea() const
     return area.reduced (12.0f);
 }
 
+void SoundMapView::AxisScale::build (std::vector<float> logValues)
+{
+    std::sort (logValues.begin(), logValues.end());
+    sortedLogValues = std::move (logValues);
+}
+
+float SoundMapView::AxisScale::normalise (float value) const
+{
+    if (sortedLogValues.size() < 2)
+        return 0.5f;
+
+    const auto logValue = std::log (std::max (value, 1.0e-3f));
+    const auto low = sortedLogValues.front();
+    const auto high = sortedLogValues.back();
+    const auto linear = (logValue - low) / std::max (high - low, 1.0e-3f);
+
+    const auto upper = std::lower_bound (sortedLogValues.begin(), sortedLogValues.end(), logValue);
+    float rank;
+    if (upper == sortedLogValues.begin())
+        rank = 0.0f;
+    else if (upper == sortedLogValues.end())
+        rank = 1.0f;
+    else
+    {
+        const auto index = static_cast<float> (std::distance (sortedLogValues.begin(), upper));
+        const auto previous = *(upper - 1);
+        const auto fraction = (logValue - previous) / std::max (*upper - previous, 1.0e-6f);
+        rank = (index - 1.0f + fraction) / static_cast<float> (sortedLogValues.size() - 1);
+    }
+
+    return edgePadding + (1.0f - 2.0f * edgePadding) * (rankWeight * rank + (1.0f - rankWeight) * linear);
+}
+
 float SoundMapView::xForSeconds (float seconds) const
 {
     const auto area = plotArea();
-    const auto normalised = (std::log (std::max (seconds, 0.01f)) - logSecondsRange.getStart()) / std::max (logSecondsRange.getLength(), 1.0e-3f);
-    return area.getX() + normalised * area.getWidth();
+    return area.getX() + secondsScale.normalise (seconds) * area.getWidth();
 }
 
 float SoundMapView::yForBrightness (float hertz) const
 {
     const auto area = plotArea();
-    const auto normalised = (std::log (std::max (hertz, 1.0f)) - logBrightnessRange.getStart()) / std::max (logBrightnessRange.getLength(), 1.0e-3f);
-    return area.getBottom() - normalised * area.getHeight();
+    return area.getBottom() - brightnessScale.normalise (hertz) * area.getHeight();
 }
 
 void SoundMapView::layoutDots()
@@ -217,11 +243,14 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
 {
     g.setFont (juce::FontOptions (11.0f));
 
+    auto lastTickX = -minimumTickSpacing;
     for (const auto seconds : secondsTicks)
     {
         const auto x = xForSeconds (seconds);
-        if (x < area.getX() || x > area.getRight())
+        if (x < area.getX() || x > area.getRight() - 30.0f || x - lastTickX < minimumTickSpacing)
             continue;
+
+        lastTickX = x;
 
         g.setColour (theme::outline.withAlpha (0.6f));
         g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());

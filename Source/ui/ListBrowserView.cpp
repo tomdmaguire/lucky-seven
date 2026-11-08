@@ -71,11 +71,8 @@ public:
         const auto& item = *programs[static_cast<size_t> (row)];
 
         g.setFont (juce::FontOptions (14.0f));
-        g.setColour (theme::textDim);
-        g.drawText (juce::String (item.entry.number).paddedLeft ('0', 2), 14, 0, 26, height, juce::Justification::centredLeft);
-
         g.setColour (selected ? theme::text : theme::text.withAlpha (0.85f));
-        g.drawText (item.entry.name, 44, 0, width - 120, height, juce::Justification::centredLeft);
+        g.drawText (item.entry.name, 16, 0, width - 92, height, juce::Justification::centredLeft);
 
         if (item.profile)
         {
@@ -145,6 +142,13 @@ bool ListBrowserView::keyPressed (const juce::KeyPress& key, juce::Component* or
 void ListBrowserView::setItems (std::vector<BrowserItem> newItems)
 {
     items = std::move (newItems);
+    std::sort (items.begin(), items.end(), [] (const BrowserItem& a, const BrowserItem& b)
+    {
+        if (a.entry.category != b.entry.category)
+            return a.entry.category.compareNatural (b.entry.category) < 0;
+        return a.entry.name.compareNatural (b.entry.name) < 0;
+    });
+
     categories.clear();
     for (const auto& item : items)
         if (categories.empty() || categories.back().first != item.entry.categoryIndex)

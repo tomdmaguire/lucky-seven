@@ -37,6 +37,15 @@ private:
         juce::Point<float> target, position;
     };
 
+    /** Maps values onto 0..1 by blending their rank among all programs with their log position, so clusters spread out. */
+    struct AxisScale
+    {
+        std::vector<float> sortedLogValues;
+
+        void build (std::vector<float> logValues);
+        float normalise (float value) const;
+    };
+
     juce::Rectangle<float> plotArea() const;
     float xForSeconds (float seconds) const;
     float yForBrightness (float hertz) const;
@@ -52,7 +61,7 @@ private:
     juce::String selectedId;
     float decayRatio = 1.0f;
     int hoveredDot = -1;
-    juce::Range<float> logSecondsRange, logBrightnessRange;
+    AxisScale secondsScale, brightnessScale;
 };
 
 } // namespace lucky

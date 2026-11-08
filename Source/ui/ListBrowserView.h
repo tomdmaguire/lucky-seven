@@ -6,7 +6,7 @@
 namespace lucky
 {
 
-/** Two-column browser: categories on the left, the selected category's programs on the right. */
+/** Two-column browser: categories on the left, the selected category's programs on the right, both alphabetical. */
 class ListBrowserView final : public juce::Component,
                               private juce::KeyListener
 {
