@@ -39,7 +39,7 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
                  [this] { chooseFolder(); },
                  [this] { audioProcessor.getCatalogue().rescan(); } })
 {
-    setLookAndFeel (&lookAndFeel);
+    setLookAndFeel (&lookAndFeel.get());
     addAndMakeVisible (browser);
 
     for (auto* tab : { &mapTab, &listTab })
@@ -49,6 +49,7 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
         addAndMakeVisible (*tab);
     }
     mapTab.onClick = [this] { if (mapTab.getToggleState()) setView (lucky::BrowserPanel::View::map); };
+    listTab.setComponentID ("listTab");
     listTab.onClick = [this] { if (listTab.getToggleState()) setView (lucky::BrowserPanel::View::list); };
     setView (lucky::BrowserPanel::viewFromString (
         audioProcessor.getParameters().state.getProperty (LuckySevenProcessor::viewProperty, "map").toString()));

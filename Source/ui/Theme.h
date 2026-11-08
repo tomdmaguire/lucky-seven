@@ -53,7 +53,7 @@ inline juce::Path heartPath (juce::Rectangle<float> r)
 /** Small uppercase label font used across the UI. */
 inline juce::FontOptions labelFont (float height = 11.0f)
 {
-    return juce::FontOptions (height).withKerningFactor (0.08f);
+    return juce::FontOptions (height).withStyle ("Medium").withKerningFactor (0.08f);
 }
 
 /** Formats a duration in seconds as e.g. "2.4 s" or "850 ms". */

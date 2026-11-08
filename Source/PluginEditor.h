@@ -41,7 +41,7 @@ private:
     static void paintSegmentSeven (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour colour);
 
     LuckySevenProcessor& audioProcessor;
-    lucky::LuckyLookAndFeel lookAndFeel;
+    juce::SharedResourcePointer<lucky::LuckyLookAndFeel> lookAndFeel;
     juce::TooltipWindow tooltips { this, 400 };
     lucky::BrowserPanel browser;
     juce::TextButton mapTab { "MAP" }, listTab { "LIST" };

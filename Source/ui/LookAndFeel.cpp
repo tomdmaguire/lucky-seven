@@ -1,11 +1,18 @@
 #include "LookAndFeel.h"
 #include "Theme.h"
+#include <BinaryData.h>
 
 namespace lucky
 {
 
 LuckyLookAndFeel::LuckyLookAndFeel()
+    : regular (juce::Typeface::createSystemTypefaceFor (LuckySevenFonts::BarlowRegular_ttf, LuckySevenFonts::BarlowRegular_ttfSize)),
+      medium (juce::Typeface::createSystemTypefaceFor (LuckySevenFonts::BarlowMedium_ttf, LuckySevenFonts::BarlowMedium_ttfSize)),
+      semiBold (juce::Typeface::createSystemTypefaceFor (LuckySevenFonts::BarlowSemiBold_ttf, LuckySevenFonts::BarlowSemiBold_ttfSize))
 {
+    juce::LookAndFeel::setDefaultLookAndFeel (this);
+    juce::Typeface::clearTypefaceCache();
+
     setColour (juce::ResizableWindow::backgroundColourId, theme::background);
     setColour (juce::ListBox::backgroundColourId, theme::background);
     setColour (juce::ListBox::outlineColourId, theme::outline);
@@ -22,6 +29,25 @@ LuckyLookAndFeel::LuckyLookAndFeel()
     setColour (juce::TooltipWindow::backgroundColourId, theme::panelRaised);
     setColour (juce::TooltipWindow::textColourId, theme::text);
     setColour (juce::TooltipWindow::outlineColourId, theme::outline);
+}
+
+LuckyLookAndFeel::~LuckyLookAndFeel()
+{
+    if (&juce::LookAndFeel::getDefaultLookAndFeel() == this)
+        juce::LookAndFeel::setDefaultLookAndFeel (nullptr);
+    juce::Typeface::clearTypefaceCache();
+}
+
+juce::Typeface::Ptr LuckyLookAndFeel::getTypefaceForFont (const juce::Font& font)
+{
+    if (font.getTypefaceName() != juce::Font::getDefaultSansSerifFontName())
+        return juce::LookAndFeel_V4::getTypefaceForFont (font);
+
+    if (font.isBold())
+        return semiBold;
+    if (font.getTypefaceStyle().containsIgnoreCase ("Medium"))
+        return medium;
+    return regular;
 }
 
 void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int width, int height, float sliderPos,

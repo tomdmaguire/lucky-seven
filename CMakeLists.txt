@@ -33,6 +33,14 @@ juce_add_plugin(LuckySeven
     COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
+juce_add_binary_data(LuckySevenFonts
+    NAMESPACE LuckySevenFonts
+    SOURCES
+        Resources/Fonts/Barlow-Regular.ttf
+        Resources/Fonts/Barlow-Medium.ttf
+        Resources/Fonts/Barlow-SemiBold.ttf
+)
+
 set(LUCKY_SEVEN_CORE_SOURCES
     Source/ir/IrAnalysis.cpp
     Source/ir/IrLibrary.cpp
@@ -63,6 +71,7 @@ target_compile_definitions(LuckySeven PUBLIC
 
 target_link_libraries(LuckySeven
     PRIVATE
+        LuckySevenFonts
         juce::juce_audio_utils
         juce::juce_dsp
     PUBLIC
@@ -117,3 +126,8 @@ target_compile_definitions(LuckySevenProbe PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_C
 target_link_libraries(LuckySevenProbe
     PRIVATE juce::juce_audio_processors juce::juce_audio_utils
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
+
+add_executable(LuckySevenSnapshot tools/Snapshot.cpp)
+target_include_directories(LuckySevenSnapshot PRIVATE Source $<TARGET_PROPERTY:LuckySeven,INCLUDE_DIRECTORIES>)
+target_compile_definitions(LuckySevenSnapshot PRIVATE $<TARGET_PROPERTY:LuckySeven,COMPILE_DEFINITIONS>)
+target_link_libraries(LuckySevenSnapshot PRIVATE LuckySeven)
