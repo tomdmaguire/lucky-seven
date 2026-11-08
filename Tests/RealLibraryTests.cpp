@@ -26,16 +26,20 @@ public:
             if (entry == entries.end())
                 continue;
 
-            double rate = 0.0;
-            auto ir = lucky::readIrFile (entry->fileForRate (48000.0), rate);
-            expectEquals (ir.getNumChannels(), 4);
-            lucky::normaliseEnergy (ir);
+            for (const auto fileRate : { 44100.0, 48000.0 })
+            {
+                double rate = 0.0;
+                auto ir = lucky::readIrFile (entry->fileForRate (fileRate), rate);
+                expectEquals (rate, fileRate);
+                expectEquals (ir.getNumChannels(), 4);
+                lucky::normaliseEnergy (ir);
 
-            const auto profile = lucky::analyse (ir, rate);
-            const auto shortened = lucky::analyse (lucky::shortenDecay (ir, rate, profile, 0.5f), rate);
-            logMessage (id + ": mid T60 " + juce::String (profile.midT60, 2) + " s -> " + juce::String (shortened.midT60, 2)
-                        + " s, brightness " + juce::String (profile.brightnessHz, 0) + " Hz");
-            expectWithinAbsoluteError (shortened.midT60, profile.midT60 * 0.5f, profile.midT60 * 0.1f);
+                const auto profile = lucky::analyse (ir, rate);
+                const auto shortened = lucky::analyse (lucky::shortenDecay (ir, rate, profile, 0.5f), rate);
+                logMessage (id + " @ " + juce::String (rate) + ": mid T60 " + juce::String (profile.midT60, 2) + " s -> " + juce::String (shortened.midT60, 2)
+                            + " s, brightness " + juce::String (profile.brightnessHz, 0) + " Hz");
+                expectWithinAbsoluteError (shortened.midT60, profile.midT60 * 0.5f, profile.midT60 * 0.1f);
+            }
         }
     }
 };

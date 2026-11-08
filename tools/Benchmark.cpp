@@ -5,8 +5,9 @@
 
 namespace
 {
-constexpr double sampleRate = 48000.0;
 constexpr double secondsToProcess = 20.0;
+double sampleRate = 48000.0;
+double irSampleRate = 48000.0;
 
 struct Result { double averagePercent, worstBlockPercent, p999Percent; };
 
@@ -18,7 +19,8 @@ Result measure (const juce::AudioBuffer<float>& quad, int headSize, int blockSiz
     engine.setWetFilter (80.0f, 12000.0f);
 
     juce::AudioBuffer<float> copy (quad);
-    engine.loadIr (lucky::splitTrueStereo (copy, sampleRate));
+    engine.loadIr (lucky::splitTrueStereo (copy, irSampleRate));
+    const auto expectedSize = static_cast<int> (quad.getNumSamples() * sampleRate / irSampleRate * 0.9);
 
     juce::AudioBuffer<float> block (2, blockSize);
     juce::Random random (1);
@@ -29,7 +31,7 @@ Result measure (const juce::AudioBuffer<float>& quad, int headSize, int blockSiz
                 block.setSample (ch, i, random.nextFloat() * 0.2f - 0.1f);
     };
 
-    while (engine.getCurrentIrSize() < quad.getNumSamples())
+    while (engine.getCurrentIrSize() < expectedSize)
     {
         fillNoise();
         engine.process (block);
@@ -62,12 +64,15 @@ int main (int argc, char** argv)
 {
     if (argc < 2)
     {
-        std::cerr << "usage: LuckySevenBench <ir.wav> [ratio]\n";
+        std::cerr << "usage: LuckySevenBench <ir.wav> [decay ratio] [block size] [host sample rate]\n";
         return 1;
     }
 
     double rate = 0.0;
     auto ir = lucky::readIrFile (juce::File (argv[1]), rate);
+    irSampleRate = rate;
+    sampleRate = argc > 4 ? std::atof (argv[4]) : rate;
+    std::cout << "host rate " << sampleRate << " Hz, IR rate " << rate << " Hz\n";
     lucky::normaliseEnergy (ir);
 
     if (argc > 2)
