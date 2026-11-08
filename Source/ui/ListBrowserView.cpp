@@ -142,12 +142,7 @@ bool ListBrowserView::keyPressed (const juce::KeyPress& key, juce::Component* or
 void ListBrowserView::setItems (std::vector<BrowserItem> newItems)
 {
     items = std::move (newItems);
-    std::sort (items.begin(), items.end(), [] (const BrowserItem& a, const BrowserItem& b)
-    {
-        if (a.entry.category != b.entry.category)
-            return a.entry.category.compareNatural (b.entry.category) < 0;
-        return a.entry.name.compareNatural (b.entry.name) < 0;
-    });
+    std::sort (items.begin(), items.end(), alphabeticalOrder);
 
     categories.clear();
     for (const auto& item : items)

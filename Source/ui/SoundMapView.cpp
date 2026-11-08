@@ -239,11 +239,16 @@ void SoundMapView::paint (juce::Graphics& g)
 
         g.setFont (theme::labelFont (12.0f));
         const auto label = dot.item->entry.name.toUpperCase();
-        const auto labelWidth = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), label) + 12.0f;
+        const auto labelWidth = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), label) + 20.0f;
         const auto above = dot.position.y - area.getY() > 40.0f;
         auto labelBounds = juce::Rectangle<float> (labelWidth, 16.0f)
                                .withCentre (dot.position.translated (0.0f, (selectionRingRadius + 11.0f) * (above ? -1.0f : 1.0f)));
-        labelBounds = labelBounds.constrainedWithin (getLocalBounds().toFloat().reduced (4.0f));
+        labelBounds = labelBounds.constrainedWithin (getLocalBounds().toFloat().reduced (4.0f)).expanded (0.0f, 3.0f);
+        g.setColour (theme::background.withAlpha (0.92f));
+        g.fillRoundedRectangle (labelBounds, labelBounds.getHeight() * 0.5f);
+        g.setColour (colour.withAlpha (0.5f));
+        g.drawRoundedRectangle (labelBounds.reduced (0.5f), labelBounds.getHeight() * 0.5f, 1.0f);
+        g.setColour (theme::text);
         g.drawText (label, labelBounds, juce::Justification::centred);
     }
 
@@ -258,7 +263,7 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
     for (const auto seconds : secondsTicks)
     {
         const auto x = xForSeconds (seconds);
-        if (x < area.getX() || x > area.getRight() - 30.0f || x - lastTickX < minimumTickSpacing)
+        if (x < area.getX() || x > area.getRight() - 70.0f || x - lastTickX < minimumTickSpacing)
             continue;
 
         lastTickX = x;
