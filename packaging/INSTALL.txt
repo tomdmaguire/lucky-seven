@@ -1,0 +1,24 @@
+Installing Lucky Seven
+======================
+
+1. Copy the plugins into place:
+   - "Lucky Seven.vst3"      -> ~/Library/Audio/Plug-Ins/VST3
+   - "Lucky Seven.component" -> ~/Library/Audio/Plug-Ins/Components   (AU, for Logic and GarageBand)
+
+   In Finder, press Cmd+Shift+G and paste the folder path to open it.
+
+2. Unblock the plugins. Lucky Seven is free and not signed by an Apple developer
+   account, so macOS blocks it the first time. Open Terminal and run:
+
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Lucky Seven.vst3"
+   xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.component"
+
+   Alternatively, if your DAW reports the plugin as blocked, open
+   System Settings > Privacy & Security and click "Allow Anyway".
+
+3. Get the impulse responses. Download the free "Bricasti M7 impulse response
+   archive" from https://www.samplicity.com/downloads/ and unzip the whole
+   archive into ~/Music/Lucky Seven/IRs (the folder is created the first time
+   the plugin opens).
+
+4. Rescan plugins in your DAW (in Ableton Live: Settings > Plug-Ins > Rescan).

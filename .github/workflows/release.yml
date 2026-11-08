@@ -1,0 +1,47 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - name: Configure
+        run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build plugins and tests
+        run: cmake --build build --target LuckySeven_VST3 LuckySeven_AU LuckySevenTests
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          artefacts="build/LuckySeven_artefacts/Release"
+          package="Lucky-Seven-${GITHUB_REF_NAME}-macOS"
+          mkdir -p "dist/$package"
+          cp -R "$artefacts/VST3/Lucky Seven.vst3" "dist/$package/"
+          cp -R "$artefacts/AU/Lucky Seven.component" "dist/$package/"
+          codesign --force --deep --sign - "dist/$package/Lucky Seven.vst3"
+          codesign --force --deep --sign - "dist/$package/Lucky Seven.component"
+          cp README.md CHANGELOG.md LICENSE "dist/$package/"
+          cp Resources/Fonts/OFL.txt "dist/$package/Barlow-OFL.txt"
+          cp packaging/INSTALL.txt "dist/$package/INSTALL.txt"
+          (cd dist && ditto -c -k --keepParent "$package" "$package.zip")
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "dist/Lucky-Seven-${GITHUB_REF_NAME}-macOS.zip" \
+            --title "Lucky Seven $GITHUB_REF_NAME" \
+            --notes-file CHANGELOG.md
