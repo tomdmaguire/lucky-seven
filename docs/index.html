@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lucky Seven</title>
+<meta name="description" content="Lucky Seven: a free true-stereo Bricasti M7 convolution reverb for macOS with a decay control, a sound map of every program, and Mix, Blend and Send modes.">
+<meta property="og:title" content="Lucky Seven">
+<meta property="og:description" content="I built my dream reverb plugin. Free for macOS, VST3 and AU.">
+<meta property="og:image" content="https://tomdmaguire.github.io/lucky-seven/assets/map.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Semi+Condensed:wght@500;600&display=swap">
+<style>
+  /* One dark look, matching the plugin: charcoal, Walnut Lifted category colours, Barlow throughout. */
+  :root {
+    color-scheme: dark;
+    --bg: #1b1c20;
+    --bar: #26272c;
+    --strip: #222328;
+    --line: #34363d;
+    --text: #e6e6e8;
+    --dim: #9a9ca5;
+    --amber: #e3a646;
+    --brick: #d9714f;
+    --sage: #a9c286;
+    --teal: #7cb4bb;
+    --cream: #efe0bf;
+    --rose: #c58aa0;
+    --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+    --body: "Barlow", system-ui, -apple-system, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 17px; line-height: 1.6; }
+  a { color: var(--amber); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 4px; }
+  img { max-width: 100%; height: auto; display: block; }
+
+  .wrap { max-width: 1120px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+  .label { font-family: var(--display); font-weight: 500; text-transform: uppercase; letter-spacing: 0.12em; font-size: 13px; color: var(--dim); }
+
+  header.top { background: var(--bar); border-bottom: 1px solid #00000040; position: sticky; top: 0; z-index: 10; }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 60px; }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+  .brand img { width: 30px; height: 30px; }
+  .brand span { font-family: var(--display); font-weight: 600; letter-spacing: 0.14em; font-size: 17px; }
+  nav { display: flex; gap: 22px; }
+  nav a { color: var(--dim); text-decoration: none; font-family: var(--display); font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; font-size: 14px; }
+  nav a:hover { color: var(--text); }
+
+  .hero { padding-block: 72px 40px; display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+  .hero h1 { font-family: var(--display); font-weight: 600; font-size: clamp(40px, 6vw, 68px); line-height: 1.02; letter-spacing: 0.01em; margin: 12px 0 20px; text-wrap: balance; }
+  .hero p { color: var(--dim); max-width: 56ch; margin: 0 0 16px; }
+  .hero p strong { color: var(--text); font-weight: 500; }
+  .actions { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 28px; }
+  .button { display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px; border-radius: 6px; font-family: var(--display); font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; font-size: 15px; text-decoration: none; }
+  .button.primary { background: var(--amber); color: #1b1c20; }
+  .button.primary:hover { background: #ecb65e; }
+  .button.secondary { color: var(--text); border: 1px solid var(--line); }
+  .button.secondary:hover { border-color: var(--dim); }
+  .specs { margin-top: 18px; font-size: 14px; color: var(--dim); }
+
+  .digit { justify-self: center; width: min(100%, 300px); aspect-ratio: 1; }
+  .digit svg { width: 100%; height: 100%; overflow: visible; }
+  .digit .lit { stroke: var(--amber); filter: drop-shadow(0 0 10px rgba(227, 166, 70, 0.55)); }
+  .digit .unlit { stroke: var(--amber); opacity: 0.1; }
+
+  .shot { margin: 8px 0 0; }
+  .shot img { border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); }
+  figcaption { color: var(--dim); font-size: 15px; margin-top: 12px; }
+
+  section { padding-block: 64px; }
+  section + section { border-top: 1px solid var(--line); }
+  h2 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 4vw, 40px); letter-spacing: 0.02em; margin: 6px 0 28px; text-wrap: balance; }
+
+  .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 34px; }
+  .feature h3 { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: 0.03em; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
+  .feature h3::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, var(--amber)); box-shadow: 0 0 0 5px color-mix(in srgb, var(--dot, var(--amber)) 18%, transparent); flex: none; }
+  .feature p { margin: 0; color: var(--dim); }
+
+  .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; counter-reset: step; max-width: 780px; }
+  .steps li { counter-increment: step; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; }
+  .steps li::before { content: counter(step); font-family: var(--display); font-weight: 600; font-size: 22px; color: var(--amber); width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center; }
+  .steps h3 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: 0.03em; margin: 6px 0 4px; }
+  .steps p { margin: 0 0 8px; color: var(--dim); }
+  code { font-family: var(--mono); font-size: 0.86em; color: var(--cream); background: var(--strip); padding: 2px 6px; border-radius: 4px; }
+  .command { position: relative; margin: 10px 0 6px; }
+  .command pre { margin: 0; background: #121316; border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; padding-right: 86px; overflow-x: auto; font-family: var(--mono); font-size: 14px; line-height: 1.7; color: var(--cream); }
+  .command button { position: absolute; top: 9px; right: 9px; background: var(--bar); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 5px 11px; font-family: var(--display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; cursor: pointer; }
+  .command button:hover { border-color: var(--dim); }
+
+  .notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; color: var(--dim); }
+  .notes h3 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: 0.03em; color: var(--text); margin: 0 0 4px; }
+  .notes p { margin: 0; }
+
+  footer { border-top: 1px solid var(--line); padding-block: 36px 48px; color: var(--dim); font-size: 14px; }
+  footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px 32px; }
+  footer p { margin: 0; max-width: 70ch; }
+
+  @media (max-width: 860px) {
+    .hero { grid-template-columns: minmax(0, 1fr); padding-top: 48px; gap: 24px; }
+    .digit { order: -1; width: 150px; justify-self: start; }
+    .features, .gallery, .notes { grid-template-columns: minmax(0, 1fr); }
+    nav { gap: 16px; }
+  }
+  @media (max-width: 520px) {
+    nav a.optional { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top"><img src="assets/logo.svg" alt=""><span>LUCKY SEVEN</span></a>
+    <nav aria-label="Sections">
+      <a class="optional" href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/tomdmaguire/lucky-seven">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="wrap">
+    <div class="hero">
+      <div>
+        <span class="label">Free reverb for macOS &middot; VST3 &amp; AU</span>
+        <h1>I built my dream reverb plugin.</h1>
+        <p>I love the sound of the Bricasti M7, but I never found a plugin that had that sound <strong>and</strong> worked the way I wanted to work. So I made one.</p>
+        <p>Lucky Seven plays the Bricasti M7's real impulse responses in true stereo, adds the <strong>decay control</strong> I kept wishing for, and lays all 134 programs out on a <strong>map</strong> so you can find the right room by ear instead of by name.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/tomdmaguire/lucky-seven/releases/latest">Download for Mac</a>
+          <a class="button secondary" href="#install">How to install</a>
+        </div>
+        <p class="specs">Free and open source &middot; Apple Silicon &amp; Intel &middot; macOS 13 or newer</p>
+      </div>
+
+      <div class="digit" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <g fill="none" stroke-width="5.5" stroke-linecap="round">
+            <path class="lit" d="M22 14 H42"/>
+            <path class="lit" d="M45 17 V30"/>
+            <path class="lit" d="M45 35 V48"/>
+            <path class="unlit" d="M19 17 V30"/>
+            <path class="unlit" d="M22 32.5 H42"/>
+            <path class="unlit" d="M19 35 V48"/>
+            <path class="unlit" d="M22 51 H42"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <figure class="shot">
+      <img src="assets/map.png" width="1800" height="1200" alt="Lucky Seven's sound map: 134 coloured dots plotted by decay time and brightness, with rings spreading from the selected Large &amp; Near hall, and the pre-delay, decay, low cut, high cut and mix knobs below.">
+      <figcaption>The sound map. Every program sits by how long it rings (left to right) and how bright it sounds (bottom to top). While audio plays, rings spread from the current program and fade over its decay time.</figcaption>
+    </figure>
+  </div>
+
+  <section id="features">
+    <div class="wrap">
+      <span class="label">What it does</span>
+      <h2>Everything I wanted, nothing I don't use.</h2>
+      <div class="features">
+        <div class="feature" style="--dot: var(--amber)">
+          <h3>Real M7 sound</h3>
+          <p>True-stereo convolution with Samplicity's free Bricasti M7 captures: halls, plates, rooms, chambers, ambiences and spaces. Add your own IRs too; each folder becomes a category.</p>
+        </div>
+        <div class="feature" style="--dot: var(--brick)">
+          <h3>Decay control</h3>
+          <p>Shorten any program and keep its character. Highs still die away faster than lows, so a shortened hall still sounds like that hall, just tighter.</p>
+        </div>
+        <div class="feature" style="--dot: var(--sage)">
+          <h3>Find it by ear</h3>
+          <p>Browse on the map or the list, search across every category, star favourites, and press Shift + arrow keys to jump to something shorter or longer with the same tone.</p>
+        </div>
+        <div class="feature" style="--dot: var(--teal)">
+          <h3>Mix, Blend or Send</h3>
+          <p>Mix for a classic wet/dry knob. Blend keeps your dry signal at 0&nbsp;dB and lets you dial reverb in by the decibel. Send goes 100% wet for return tracks.</p>
+        </div>
+        <div class="feature" style="--dot: var(--cream)">
+          <h3>Tone on the tail only</h3>
+          <p>Low and high cut knobs shape just the reverb, never your source. Pre-delay up to 250&nbsp;ms.</p>
+        </div>
+        <div class="feature" style="--dot: var(--rose)">
+          <h3>Built for real sessions</h3>
+          <p>A/B two settings, resize the window from 75% to 200%, and run plenty of instances: each one uses a couple of percent of a CPU core and sleeps when the input goes quiet.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-label="More screenshots">
+    <div class="wrap">
+      <div class="gallery">
+        <figure class="shot">
+          <img src="assets/list.png" width="1800" height="1200" loading="lazy" alt="The list view searching for &quot;plate&quot;: 23 results across categories, each with its decay time.">
+          <figcaption>The list view, searching every category at once.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="assets/map-spaces.png" width="1800" height="1200" loading="lazy" alt="The sound map with Europa, a long space, selected and wide rings spreading across the map.">
+          <figcaption>Long spaces leave long, slow rings.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section id="install">
+    <div class="wrap">
+      <span class="label">Install</span>
+      <h2>Up and running in five minutes.</h2>
+      <ol class="steps">
+        <li>
+          <div>
+            <h3>Download the plugin</h3>
+            <p>Grab the latest zip from the <a href="https://github.com/tomdmaguire/lucky-seven/releases/latest">releases page</a> and unzip it. It contains <code>Lucky Seven.vst3</code> and <code>Lucky Seven.component</code> (the AU, for Logic and GarageBand).</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Copy it into your plug-in folders</h3>
+            <p>Put <code>Lucky Seven.vst3</code> in <code>~/Library/Audio/Plug-Ins/VST3</code> and <code>Lucky Seven.component</code> in <code>~/Library/Audio/Plug-Ins/Components</code>. In Finder, press <code>Cmd</code> + <code>Shift</code> + <code>G</code> and paste a path to jump there.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Let macOS open it</h3>
+            <p>Lucky Seven isn't signed with a paid Apple developer certificate, so macOS blocks it the first time. Open Terminal and run:</p>
+            <div class="command">
+              <pre id="unblock">xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Lucky Seven.vst3"
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.component"</pre>
+              <button type="button" data-copy="unblock">Copy</button>
+            </div>
+            <p>Or, if your DAW says the plugin is blocked, open System Settings &rarr; Privacy &amp; Security and click Allow Anyway.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Get the impulse responses</h3>
+            <p>Download the free <strong>Bricasti M7 impulse response archive</strong> from the bottom of <a href="https://www.samplicity.com/downloads/">Samplicity's downloads page</a> and unzip the whole thing into <code>~/Music/Lucky Seven/IRs</code>. Lucky Seven creates that folder the first time it opens, and finds everything inside it.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <h3>Rescan in your DAW</h3>
+            <p>In Ableton Live, open Settings &rarr; Plug-Ins and click Rescan. Lucky Seven appears under Audio Effects.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <section aria-label="Good to know">
+    <div class="wrap">
+      <span class="label">Good to know</span>
+      <h2>Notes</h2>
+      <div class="notes">
+        <div>
+          <h3>Sample rates</h3>
+          <p>Lucky Seven is happiest at 44.1 or 48 kHz. At 88.2 or 96 kHz it uses about three times the CPU, so give it a buffer of 256 samples or more.</p>
+        </div>
+        <div>
+          <h3>Your own impulse responses</h3>
+          <p>Drop WAV, AIFF or FLAC files into the IR folder; each subfolder becomes a category on the map. Choose Rescan IR folder from the &middot;&middot;&middot; menu after adding files.</p>
+        </div>
+        <div>
+          <h3>Open source</h3>
+          <p>The code is on <a href="https://github.com/tomdmaguire/lucky-seven">GitHub</a> under the AGPLv3. Bug reports and ideas are welcome as issues.</p>
+        </div>
+        <div>
+          <h3>About the IRs</h3>
+          <p>The impulse responses are Samplicity's free captures of the Bricasti M7. They are not included with Lucky Seven; please download them from Samplicity and don't redistribute them.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Lucky Seven by <a href="https://github.com/tomdmaguire">Tom Maguire</a>. Free and open source under the AGPLv3. Built with JUCE; interface set in Barlow (SIL Open Font License).</p>
+    <p>Not affiliated with Bricasti Design or Samplicity.</p>
+  </div>
+</footer>
+
+<script>
+  document.querySelectorAll("[data-copy]").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const source = document.getElementById(button.dataset.copy);
+      try {
+        await navigator.clipboard.writeText(source.textContent);
+        button.textContent = "Copied";
+      } catch {
+        const range = document.createRange();
+        range.selectNodeContents(source);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        button.textContent = "Selected";
+      }
+      setTimeout(() => { button.textContent = "Copy"; }, 2000);
+    });
+  });
+</script>
+</body>
+</html>
