@@ -110,3 +110,10 @@ target_compile_definitions(LuckySevenBench PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_C
 target_link_libraries(LuckySevenBench
     PRIVATE juce::juce_audio_formats juce::juce_dsp juce::juce_data_structures
     PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)
+
+juce_add_console_app(LuckySevenProbe PRODUCT_NAME "Lucky Seven Probe")
+target_sources(LuckySevenProbe PRIVATE tools/PluginProbe.cpp)
+target_compile_definitions(LuckySevenProbe PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_PLUGINHOST_VST3=1 JUCE_PLUGINHOST_AU=1)
+target_link_libraries(LuckySevenProbe
+    PRIVATE juce::juce_audio_processors juce::juce_audio_utils
+    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_warning_flags)
