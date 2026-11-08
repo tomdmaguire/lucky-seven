@@ -37,6 +37,7 @@ const std::array<float, 12> secondsTicks { 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f,
 
 SoundMapView::SoundMapView (SelectionCallback callback) : onSelect (std::move (callback))
 {
+    setComponentID ("soundMap");
     setWantsKeyboardFocus (true);
     setMouseCursor (juce::MouseCursor::PointingHandCursor);
 }
@@ -519,16 +520,48 @@ void SoundMapView::mouseDown (const juce::MouseEvent& event)
     }
 }
 
+int SoundMapView::nearestAlongDecay (int from, bool longer) const
+{
+    const auto origin = dots[static_cast<size_t> (from)].target;
+    const auto height = plotArea().getHeight();
+
+    for (const auto band : { 0.06f, 0.15f, 1.0f })
+    {
+        auto best = -1;
+        auto bestDistance = std::numeric_limits<float>::max();
+
+        for (size_t i = 0; i < dots.size(); ++i)
+        {
+            const auto delta = dots[i].target - origin;
+            const auto along = longer ? delta.x : -delta.x;
+            if (static_cast<int> (i) == from || ! isShown (dots[i]) || along <= 0.5f || std::abs (delta.y) > band * height)
+                continue;
+
+            if (along < bestDistance)
+            {
+                bestDistance = along;
+                best = static_cast<int> (i);
+            }
+        }
+
+        if (best >= 0)
+            return best;
+    }
+
+    return -1;
+}
+
 bool SoundMapView::keyPressed (const juce::KeyPress& key)
 {
     juce::Point<float> direction;
-    if (key == juce::KeyPress::leftKey)
+    const auto code = key.getKeyCode();
+    if (code == juce::KeyPress::leftKey)
         direction = { -1.0f, 0.0f };
-    else if (key == juce::KeyPress::rightKey)
+    else if (code == juce::KeyPress::rightKey)
         direction = { 1.0f, 0.0f };
-    else if (key == juce::KeyPress::upKey)
+    else if (code == juce::KeyPress::upKey)
         direction = { 0.0f, -1.0f };
-    else if (key == juce::KeyPress::downKey)
+    else if (code == juce::KeyPress::downKey)
         direction = { 0.0f, 1.0f };
     else
         return false;
@@ -536,6 +569,17 @@ bool SoundMapView::keyPressed (const juce::KeyPress& key)
     const auto current = selectedDot();
     if (current < 0)
         return true;
+
+    if (key.getModifiers().isShiftDown() && juce::exactlyEqual (direction.y, 0.0f))
+    {
+        if (const auto target = nearestAlongDecay (current, direction.x > 0.0f); target >= 0)
+        {
+            selectedId = dots[static_cast<size_t> (target)].item->entry.id();
+            onSelect (selectedId);
+            repaint();
+        }
+        return true;
+    }
 
     const auto origin = dots[static_cast<size_t> (current)].position;
     auto best = -1;
@@ -574,7 +618,7 @@ juce::String SoundMapView::getTooltip()
 
     const auto& item = *dots[static_cast<size_t> (hoveredDot)].item;
     return item.entry.category + " " + juce::String (item.entry.number).paddedLeft ('0', 2) + "  " + item.entry.name
-         + "\n" + theme::formatSeconds (item.profile->midT60) + " decay";
+         + "\n" + theme::formatSeconds (item.profile->midT60) + " decay. Shift+left/right: shorter/longer with a similar tone";
 }
 
 } // namespace lucky

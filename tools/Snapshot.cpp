@@ -76,6 +76,28 @@ int checkState()
     return 0;
 }
 
+/** Presses Shift+Right twice and Shift+Left once on the map, printing the program after each step. */
+int checkKeys()
+{
+    std::unique_ptr<juce::AudioProcessor> owner (createPluginFilter());
+    auto& processor = dynamic_cast<LuckySevenProcessor&> (*owner);
+    std::unique_ptr<juce::AudioProcessorEditor> editor (processor.createEditorAndMakeActive());
+    pumpMessages (1.5);
+
+    auto* map = findById (*editor, "soundMap");
+    std::cout << "start:        " << processor.getSelectedIrId() << "\n";
+    for (const auto& [name, key] : { std::pair { "shift+right", juce::KeyPress::rightKey }, std::pair { "shift+right", juce::KeyPress::rightKey },
+                                     std::pair { "shift+left", juce::KeyPress::leftKey } })
+    {
+        map->keyPressed (juce::KeyPress (key, juce::ModifierKeys::shiftModifier, 0));
+        pumpMessages (0.1);
+        std::cout << juce::String (name).paddedRight (' ', 14) << processor.getSelectedIrId() << "\n";
+    }
+
+    owner->editorBeingDeleted (editor.get());
+    return 0;
+}
+
 /** Renders the editor to a PNG. Modes: "list", "active" (plays test hits first), "timing", or a scale such as "150%". */
 int snapshot (const juce::String& path, const juce::String& mode)
 {
@@ -144,5 +166,9 @@ int main (int argc, char** argv)
 
     juce::ScopedJuceInitialiser_GUI juce;
     const juce::String first (argv[1]);
-    return first == "--check-state" ? checkState() : snapshot (first, argc > 2 ? argv[2] : "");
+    if (first == "--check-state")
+        return checkState();
+    if (first == "--check-keys")
+        return checkKeys();
+    return snapshot (first, argc > 2 ? argv[2] : "");
 }
