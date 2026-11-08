@@ -168,6 +168,9 @@ int SoundMapView::dotAt (juce::Point<float> point) const
     auto bestDistance = hitRadius;
     for (size_t i = 0; i < dots.size(); ++i)
     {
+        if (! isShown (dots[i]))
+            continue;
+
         const auto distance = dots[i].position.getDistanceFrom (point);
         if (distance < bestDistance)
         {
@@ -176,6 +179,11 @@ int SoundMapView::dotAt (juce::Point<float> point) const
         }
     }
     return best;
+}
+
+bool SoundMapView::isShown (const Dot& dot) const
+{
+    return categoryFilter.empty() || categoryFilter.count (dot.item->entry.categoryIndex) > 0;
 }
 
 int SoundMapView::selectedDot() const
@@ -204,6 +212,9 @@ void SoundMapView::paint (juce::Graphics& g)
 
     for (const auto& dot : dots)
     {
+        if (! isShown (dot))
+            continue;
+
         g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (0.12f));
         g.fillEllipse (juce::Rectangle<float> (glowRadius * 2.0f, glowRadius * 2.0f).withCentre (dot.position));
     }
@@ -211,13 +222,16 @@ void SoundMapView::paint (juce::Graphics& g)
     for (size_t i = 0; i < dots.size(); ++i)
     {
         const auto& dot = dots[i];
+        if (! isShown (dot))
+            continue;
+
         const auto hovered = static_cast<int> (i) == hoveredDot;
         const auto radius = hovered ? dotRadius + 2.0f : dotRadius;
         g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (hovered ? 1.0f : 0.9f));
         g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (dot.position));
     }
 
-    if (const auto selected = selectedDot(); selected >= 0)
+    if (const auto selected = selectedDot(); selected >= 0 && isShown (dots[static_cast<size_t> (selected)]))
     {
         const auto& dot = dots[static_cast<size_t> (selected)];
         const auto colour = theme::categoryColour (dot.item->entry.categoryIndex);
@@ -282,31 +296,50 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
     g.drawText ("DARK", labelArea.withTrimmedTop (area.getHeight() - 14.0f), juce::Justification::centredLeft);
 }
 
+std::vector<SoundMapView::LegendEntry> SoundMapView::legendEntries() const
+{
+    std::vector<LegendEntry> entries;
+    for (const auto& item : items)
+        if (entries.empty() || entries.back().categoryIndex != item.entry.categoryIndex)
+            entries.push_back ({ item.entry.categoryIndex, item.entry.category.toUpperCase(), {} });
+
+    const juce::Font font (theme::labelFont (10.0f));
+    constexpr auto gap = 22.0f;
+    constexpr auto dotSpace = 14.0f;
+    auto totalWidth = 0.0f;
+    for (const auto& entry : entries)
+        totalWidth += dotSpace + juce::GlyphArrangement::getStringWidth (font, entry.text) + gap;
+
+    const auto legend = getLocalBounds().removeFromBottom (legendHeight).toFloat();
+    auto x = legend.getCentreX() - (totalWidth - gap) * 0.5f;
+    for (auto& entry : entries)
+    {
+        const auto width = dotSpace + juce::GlyphArrangement::getStringWidth (font, entry.text) + 4.0f;
+        entry.bounds = { x, legend.getY(), width, legend.getHeight() };
+        x += width - 4.0f + gap;
+    }
+
+    return entries;
+}
+
 void SoundMapView::paintLegend (juce::Graphics& g) const
 {
-    std::vector<std::pair<int, juce::String>> categories;
-    for (const auto& item : items)
-        if (categories.empty() || categories.back().first != item.entry.categoryIndex)
-            categories.emplace_back (item.entry.categoryIndex, item.entry.category);
-
     g.setFont (theme::labelFont (10.0f));
-    constexpr auto gap = 22.0f;
-    auto totalWidth = 0.0f;
-    for (const auto& [index, name] : categories)
-        totalWidth += 14.0f + juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), name.toUpperCase()) + gap;
 
-    auto legend = getLocalBounds().removeFromBottom (legendHeight).toFloat();
-    auto x = legend.getCentreX() - (totalWidth - gap) * 0.5f;
-
-    for (const auto& [index, name] : categories)
+    for (const auto& entry : legendEntries())
     {
-        const auto text = name.toUpperCase();
-        const auto width = juce::GlyphArrangement::getStringWidth (g.getCurrentFont(), text);
-        g.setColour (theme::categoryColour (index));
-        g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre ({ x + 3.0f, legend.getCentreY() }));
-        g.setColour (theme::textDim);
-        g.drawText (text, juce::Rectangle<float> (x + 12.0f, legend.getY(), width + 4.0f, legend.getHeight()), juce::Justification::centredLeft);
-        x += 14.0f + width + gap;
+        const auto active = categoryFilter.empty() || categoryFilter.count (entry.categoryIndex) > 0;
+        const auto selected = categoryFilter.count (entry.categoryIndex) > 0;
+        const auto colour = theme::categoryColour (entry.categoryIndex);
+        const auto dotCentre = juce::Point<float> { entry.bounds.getX() + 3.0f, entry.bounds.getCentreY() };
+
+        g.setColour (active ? colour : colour.withAlpha (0.3f));
+        g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre (dotCentre));
+        if (selected)
+            g.drawEllipse (juce::Rectangle<float> (11.0f, 11.0f).withCentre (dotCentre), 1.0f);
+
+        g.setColour (selected ? theme::text : (active ? theme::textDim : theme::textDim.withAlpha (0.4f)));
+        g.drawText (entry.text, entry.bounds.withTrimmedLeft (12.0f), juce::Justification::centredLeft);
     }
 }
 
@@ -334,6 +367,20 @@ void SoundMapView::mouseExit (const juce::MouseEvent&)
 void SoundMapView::mouseDown (const juce::MouseEvent& event)
 {
     grabKeyboardFocus();
+
+    for (const auto& entry : legendEntries())
+    {
+        if (entry.bounds.expanded (4.0f, 0.0f).contains (event.position))
+        {
+            if (! categoryFilter.erase (entry.categoryIndex))
+                categoryFilter.insert (entry.categoryIndex);
+
+            hoveredDot = -1;
+            repaint();
+            return;
+        }
+    }
+
     if (const auto dot = dotAt (event.position); dot >= 0)
     {
         selectedId = dots[static_cast<size_t> (dot)].item->entry.id();
@@ -368,7 +415,7 @@ bool SoundMapView::keyPressed (const juce::KeyPress& key)
     {
         const auto delta = dots[i].position - origin;
         const auto along = delta.x * direction.x + delta.y * direction.y;
-        if (static_cast<int> (i) == current || along <= 0.5f)
+        if (static_cast<int> (i) == current || along <= 0.5f || ! isShown (dots[i]))
             continue;
 
         const auto across = std::abs (delta.x * direction.y - delta.y * direction.x);

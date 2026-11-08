@@ -2,11 +2,12 @@
 
 #include "BrowserItem.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <set>
 
 namespace lucky
 {
 
-/** Scatter of every program by decay time (x) and brightness (y); click a dot to load it. */
+/** Scatter of every program by decay time (x) and brightness (y); click a dot to load it, click legend entries to filter by category. */
 class SoundMapView final : public juce::Component,
                            public juce::TooltipClient
 {
@@ -46,6 +47,15 @@ private:
         float normalise (float value) const;
     };
 
+    struct LegendEntry
+    {
+        int categoryIndex;
+        juce::String text;
+        juce::Rectangle<float> bounds;
+    };
+
+    std::vector<LegendEntry> legendEntries() const;
+    bool isShown (const Dot& dot) const;
     juce::Rectangle<float> plotArea() const;
     float xForSeconds (float seconds) const;
     float yForBrightness (float hertz) const;
@@ -62,6 +72,7 @@ private:
     float decayRatio = 1.0f;
     int hoveredDot = -1;
     AxisScale secondsScale, brightnessScale;
+    std::set<int> categoryFilter;
 };
 
 } // namespace lucky
