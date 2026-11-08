@@ -68,6 +68,13 @@ void SoundMapView::setSelectedId (const juce::String& id)
     repaint();
 }
 
+void SoundMapView::setFilter (std::set<int> categories)
+{
+    categoryFilter = std::move (categories);
+    staticLayerDirty = true;
+    repaint();
+}
+
 void SoundMapView::setLevelSource (std::function<std::pair<float, float>()> source)
 {
     levelSource = std::move (source);
@@ -496,6 +503,8 @@ void SoundMapView::mouseDown (const juce::MouseEvent& event)
                 categoryFilter.insert (entry.categoryIndex);
 
             staticLayerDirty = true;
+            if (onFilterChanged != nullptr)
+                onFilterChanged (categoryFilter);
             hoveredDot = -1;
             repaint();
             return;

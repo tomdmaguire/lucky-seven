@@ -24,6 +24,12 @@ public:
     /** Moves the ghost marker that shows the effective decay of the current program. */
     void setDecayRatio (float ratio);
 
+    /** Replaces the category filter (empty shows everything) without firing onFilterChanged. */
+    void setFilter (std::set<int> categories);
+
+    /** Called after the user toggles a legend entry. */
+    std::function<void (const std::set<int>&)> onFilterChanged;
+
     /** Source of (input peak, reverb peak) since the last call; drives the ripples and the glow on the current dot. */
     void setLevelSource (std::function<std::pair<float, float>()> source);
 

@@ -21,6 +21,8 @@ public:
     void setItems (const std::vector<BrowserItem>& items);
     void setSelectedId (const juce::String& id);
     void setDecayRatio (float ratio);
+    void setMapFilter (std::set<int> categories) { map.setFilter (std::move (categories)); }
+    void onMapFilterChanged (std::function<void (const std::set<int>&)> callback) { map.onFilterChanged = std::move (callback); }
     void setLevelSource (std::function<std::pair<float, float>()> source) { map.setLevelSource (std::move (source)); }
     void setView (View view);
 

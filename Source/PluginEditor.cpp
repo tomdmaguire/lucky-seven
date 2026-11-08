@@ -43,6 +43,20 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     addAndMakeVisible (browser);
     browser.setLevelSource ([this] { return audioProcessor.takePeaks(); });
 
+    std::set<int> savedFilter;
+    for (const auto& token : juce::StringArray::fromTokens (
+             audioProcessor.getParameters().state.getProperty (LuckySevenProcessor::mapFilterProperty).toString(), ",", ""))
+        if (token.isNotEmpty())
+            savedFilter.insert (token.getIntValue());
+    browser.setMapFilter (savedFilter);
+    browser.onMapFilterChanged ([this] (const std::set<int>& filter)
+    {
+        juce::StringArray tokens;
+        for (const auto category : filter)
+            tokens.add (juce::String (category));
+        audioProcessor.getParameters().state.setProperty (LuckySevenProcessor::mapFilterProperty, tokens.joinIntoString (","), nullptr);
+    });
+
     for (auto* tab : { &mapTab, &listTab })
     {
         tab->setClickingTogglesState (true);

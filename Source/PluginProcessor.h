@@ -21,6 +21,7 @@ public:
     static constexpr float highCutMinHz = 1000.0f;
     static inline const juce::Identifier irIdProperty { "irId" };
     static inline const juce::Identifier viewProperty { "view" };
+    static inline const juce::Identifier mapFilterProperty { "mapFilter" };
 
     LuckySevenProcessor();
     ~LuckySevenProcessor() override;
