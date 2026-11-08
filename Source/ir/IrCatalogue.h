@@ -43,6 +43,12 @@ public:
     /** Adds or removes a program from favourites and notifies listeners. */
     void toggleFavourite (const juce::String& id);
 
+    /** Window scale shared by every instance (1.0 = 900 x 600). */
+    float getUiScale() const;
+
+    /** Remembers the window scale; written to disk shortly after the last change. */
+    void setUiScale (float scale);
+
     /** Default folder used before the user picks one. */
     static juce::File defaultRoot();
 

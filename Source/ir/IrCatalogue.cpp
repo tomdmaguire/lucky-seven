@@ -7,6 +7,7 @@ namespace
 {
 const juce::Identifier rootKey { "irRoot" };
 const juce::String favouritesKey { "favourites" };
+const juce::String uiScaleKey { "uiScale" };
 
 juce::File cacheFile()
 {
@@ -54,6 +55,7 @@ IrCatalogue::IrCatalogue() : juce::Thread ("Lucky Seven IR analysis")
     options.filenameSuffix = ".settings";
     options.folderName = "Lucky Seven";
     options.osxLibrarySubFolder = "Application Support";
+    options.millisecondsBeforeSaving = 1000;
     settings.setStorageParameters (options);
 
     for (const auto& id : juce::StringArray::fromLines (settings.getUserSettings()->getValue (favouritesKey)))
@@ -89,6 +91,19 @@ void IrCatalogue::setRoot (const juce::File& newRoot)
         settings.saveIfNeeded();
     }
     rescan();
+}
+
+float IrCatalogue::getUiScale() const
+{
+    const juce::ScopedLock scope (lock);
+    return static_cast<float> (settings.getUserSettings()->getDoubleValue (uiScaleKey, 1.0));
+}
+
+void IrCatalogue::setUiScale (float scale)
+{
+    const juce::ScopedLock scope (lock);
+    if (! juce::approximatelyEqual (static_cast<float> (settings.getUserSettings()->getDoubleValue (uiScaleKey, 1.0)), scale))
+        settings.getUserSettings()->setValue (uiScaleKey, scale);
 }
 
 bool IrCatalogue::isFavourite (const juce::String& id) const

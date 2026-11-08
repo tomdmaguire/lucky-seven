@@ -6,13 +6,23 @@
 #include "ui/LookAndFeel.h"
 #include "ui/Theme.h"
 
-class LuckySevenEditor final : public juce::AudioProcessorEditor,
-                               private juce::ChangeListener,
-                               private juce::Timer
+/** The whole plugin interface, laid out at a fixed 900 x 600; LuckySevenEditor scales it to the window size. */
+class LuckySevenView final : public juce::Component,
+                             private juce::ChangeListener,
+                             private juce::Timer
 {
 public:
-    explicit LuckySevenEditor (LuckySevenProcessor&);
-    ~LuckySevenEditor() override;
+    static constexpr int baseWidth = 900;
+    static constexpr int baseHeight = 600;
+
+    explicit LuckySevenView (LuckySevenProcessor&);
+    ~LuckySevenView() override;
+
+    /** Called when the user picks a window size from the menu; 1.0 is 900 x 600. */
+    std::function<void (float scale)> onScaleRequested;
+
+    /** Current window scale, used to tick the matching menu item. */
+    std::function<float()> getScale;
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -58,6 +68,23 @@ private:
     juce::String shownSelection;
     float shownOriginalT60 = -1.0f;
     juce::Colour accent { lucky::theme::accent };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenView)
+};
+
+/** Resizable host window: keeps a 3:2 aspect ratio and scales LuckySevenView to fit, remembering the size globally. */
+class LuckySevenEditor final : public juce::AudioProcessorEditor
+{
+public:
+    explicit LuckySevenEditor (LuckySevenProcessor&);
+
+    void resized() override;
+
+private:
+    float currentScale() const;
+
+    LuckySevenProcessor& audioProcessor;
+    LuckySevenView view;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenEditor)
 };

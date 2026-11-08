@@ -2,8 +2,9 @@
 
 namespace
 {
-constexpr int editorWidth = 900;
-constexpr int editorHeight = 600;
+constexpr float minScale = 0.75f;
+constexpr float maxScale = 2.0f;
+constexpr std::array<float, 4> scalePresets { 1.0f, 1.25f, 1.5f, 1.75f };
 constexpr int topBarHeight = 48;
 constexpr int stripHeight = 156;
 constexpr int logoWidth = 196;
@@ -30,9 +31,8 @@ std::unique_ptr<juce::Drawable> makeMenuIcon (juce::Colour colour)
 }
 } // namespace
 
-LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
-    : AudioProcessorEditor (&p),
-      audioProcessor (p),
+LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
+    : audioProcessor (p),
       browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); },
                [this] (const juce::String& id) { audioProcessor.getCatalogue().toggleFavourite (id); },
                { [this] { audioProcessor.getCatalogue().getRoot().startAsProcess(); },
@@ -128,17 +128,17 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     audioProcessor.getCatalogue().rescan();
     refreshItems();
 
-    setSize (editorWidth, editorHeight);
+    setSize (baseWidth, baseHeight);
     startTimerHz (20);
 }
 
-LuckySevenEditor::~LuckySevenEditor()
+LuckySevenView::~LuckySevenView()
 {
     audioProcessor.getCatalogue().removeChangeListener (this);
     setLookAndFeel (nullptr);
 }
 
-void LuckySevenEditor::setupLabel (juce::Label& label, const juce::String& text)
+void LuckySevenView::setupLabel (juce::Label& label, const juce::String& text)
 {
     label.setText (text, juce::dontSendNotification);
     label.setJustificationType (juce::Justification::centred);
@@ -147,7 +147,7 @@ void LuckySevenEditor::setupLabel (juce::Label& label, const juce::String& text)
     addAndMakeVisible (label);
 }
 
-void LuckySevenEditor::setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name)
+void LuckySevenView::setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name)
 {
     knob.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
         audioProcessor.getParameters(), parameterId, knob.slider);
@@ -155,7 +155,7 @@ void LuckySevenEditor::setupKnob (Knob& knob, const juce::String& parameterId, c
     addAndMakeVisible (knob.slider);
 }
 
-void LuckySevenEditor::setupRangeLabels (Knob& knob, const juce::String& minText, const juce::String& maxText)
+void LuckySevenView::setupRangeLabels (Knob& knob, const juce::String& minText, const juce::String& maxText)
 {
     const auto style = [this] (juce::Label& label, const juce::String& text, juce::Justification justification)
     {
@@ -171,7 +171,7 @@ void LuckySevenEditor::setupRangeLabels (Knob& knob, const juce::String& minText
     style (knob.maxLabel, maxText, juce::Justification::centredLeft);
 }
 
-void LuckySevenEditor::setView (lucky::BrowserPanel::View view)
+void LuckySevenView::setView (lucky::BrowserPanel::View view)
 {
     browser.setView (view);
     mapTab.setToggleState (view == lucky::BrowserPanel::View::map, juce::dontSendNotification);
@@ -181,7 +181,7 @@ void LuckySevenEditor::setView (lucky::BrowserPanel::View view)
                                                       lucky::BrowserPanel::viewToString (view), nullptr);
 }
 
-void LuckySevenEditor::showOutputMode (int mode)
+void LuckySevenView::showOutputMode (int mode)
 {
     if (mode == outputMode)
         return;
@@ -218,12 +218,12 @@ void LuckySevenEditor::showOutputMode (int mode)
     mix.slider.repaint();
 }
 
-void LuckySevenEditor::changeListenerCallback (juce::ChangeBroadcaster*)
+void LuckySevenView::changeListenerCallback (juce::ChangeBroadcaster*)
 {
     refreshItems();
 }
 
-void LuckySevenEditor::refreshItems()
+void LuckySevenView::refreshItems()
 {
     auto& catalogue = audioProcessor.getCatalogue();
     items.clear();
@@ -242,7 +242,7 @@ void LuckySevenEditor::refreshItems()
     repaint();
 }
 
-const lucky::BrowserItem* LuckySevenEditor::selectedItem() const
+const lucky::BrowserItem* LuckySevenView::selectedItem() const
 {
     for (const auto& item : items)
         if (item.entry.id() == shownSelection)
@@ -250,7 +250,7 @@ const lucky::BrowserItem* LuckySevenEditor::selectedItem() const
     return nullptr;
 }
 
-void LuckySevenEditor::applyAccent()
+void LuckySevenView::applyAccent()
 {
     const auto* item = selectedItem();
     favouriteButton.setToggleState (item != nullptr && item->favourite, juce::dontSendNotification);
@@ -274,7 +274,7 @@ void LuckySevenEditor::applyAccent()
     favouriteButton.repaint();
 }
 
-void LuckySevenEditor::stepProgram (int delta)
+void LuckySevenView::stepProgram (int delta)
 {
     if (items.empty())
         return;
@@ -288,7 +288,7 @@ void LuckySevenEditor::stepProgram (int delta)
     audioProcessor.selectIr (ordered[static_cast<size_t> ((index + delta + count) % count)].entry.id());
 }
 
-void LuckySevenEditor::timerCallback()
+void LuckySevenView::timerCallback()
 {
     browser.setDecayRatio (static_cast<float> (decay.slider.getValue() / 100.0));
 
@@ -307,7 +307,7 @@ void LuckySevenEditor::timerCallback()
     }
 }
 
-void LuckySevenEditor::showMenu()
+void LuckySevenView::showMenu()
 {
     enum { rescanItem = 1, chooseItem, revealItem };
     const auto root = audioProcessor.getCatalogue().getRoot();
@@ -318,6 +318,14 @@ void LuckySevenEditor::showMenu()
     menu.addItem (rescanItem, "Rescan IR folder");
     menu.addItem (chooseItem, "Choose IR folder...");
     menu.addItem (revealItem, "Show in Finder", root.exists());
+    menu.addSeparator();
+
+    juce::PopupMenu sizes;
+    const auto scale = getScale != nullptr ? getScale() : 1.0f;
+    for (const auto preset : scalePresets)
+        sizes.addItem (juce::String (juce::roundToInt (preset * 100.0f)) + "%", true, std::abs (scale - preset) < 0.01f,
+                       [this, preset] { if (onScaleRequested != nullptr) onScaleRequested (preset); });
+    menu.addSubMenu ("Window size", sizes);
     menu.addSeparator();
     menu.addItem ("Get the free Bricasti IRs...", [] { lucky::EmptyStateView::downloadUrl.launchInDefaultBrowser(); });
 
@@ -333,7 +341,7 @@ void LuckySevenEditor::showMenu()
                         });
 }
 
-void LuckySevenEditor::chooseFolder()
+void LuckySevenView::chooseFolder()
 {
     chooser = std::make_unique<juce::FileChooser> ("Choose the Bricasti IR folder", audioProcessor.getCatalogue().getRoot());
     chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
@@ -348,7 +356,7 @@ void LuckySevenEditor::chooseFolder()
                           });
 }
 
-void LuckySevenEditor::paintSegmentSeven (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour colour)
+void LuckySevenView::paintSegmentSeven (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour colour)
 {
     const auto scale = bounds.getWidth() / 64.0f;
     const auto point = [&] (float x, float y) { return bounds.getTopLeft() + juce::Point<float> (x, y) * scale; };
@@ -370,7 +378,7 @@ void LuckySevenEditor::paintSegmentSeven (juce::Graphics& g, juce::Rectangle<flo
     }
 }
 
-void LuckySevenEditor::paint (juce::Graphics& g)
+void LuckySevenView::paint (juce::Graphics& g)
 {
     using namespace lucky;
     g.fillAll (theme::background);
@@ -415,7 +423,7 @@ void LuckySevenEditor::paint (juce::Graphics& g)
     g.fillRect (stripBounds.removeFromTop (1));
 }
 
-void LuckySevenEditor::resized()
+void LuckySevenView::resized()
 {
     auto bounds = getLocalBounds();
 
@@ -455,4 +463,36 @@ void LuckySevenEditor::resized()
     }
 
     browser.setBounds (bounds);
+}
+
+LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
+    : AudioProcessorEditor (&p), audioProcessor (p), view (p)
+{
+    view.getScale = [this] { return currentScale(); };
+    view.onScaleRequested = [this] (float scale)
+    {
+        setSize (juce::roundToInt (LuckySevenView::baseWidth * scale), juce::roundToInt (LuckySevenView::baseHeight * scale));
+    };
+    addAndMakeVisible (view);
+
+    setResizable (true, true);
+    setResizeLimits (juce::roundToInt (LuckySevenView::baseWidth * minScale), juce::roundToInt (LuckySevenView::baseHeight * minScale),
+                     juce::roundToInt (LuckySevenView::baseWidth * maxScale), juce::roundToInt (LuckySevenView::baseHeight * maxScale));
+    getConstrainer()->setFixedAspectRatio (static_cast<double> (LuckySevenView::baseWidth) / LuckySevenView::baseHeight);
+
+    const auto scale = juce::jlimit (minScale, maxScale, audioProcessor.getCatalogue().getUiScale());
+    setSize (juce::roundToInt (LuckySevenView::baseWidth * scale), juce::roundToInt (LuckySevenView::baseHeight * scale));
+}
+
+float LuckySevenEditor::currentScale() const
+{
+    return static_cast<float> (getWidth()) / static_cast<float> (LuckySevenView::baseWidth);
+}
+
+void LuckySevenEditor::resized()
+{
+    const auto scale = currentScale();
+    view.setBounds (0, 0, LuckySevenView::baseWidth, LuckySevenView::baseHeight);
+    view.setTransform (juce::AffineTransform::scale (scale));
+    audioProcessor.getCatalogue().setUiScale (scale);
 }

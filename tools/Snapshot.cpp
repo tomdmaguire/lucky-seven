@@ -9,6 +9,18 @@ void pumpMessages (double seconds)
 {
     CFRunLoopRunInMode (kCFRunLoopDefaultMode, seconds, false);
 }
+
+juce::Component* findById (juce::Component& parent, const juce::String& id)
+{
+    for (auto* child : parent.getChildren())
+    {
+        if (child->getComponentID() == id)
+            return child;
+        if (auto* found = findById (*child, id))
+            return found;
+    }
+    return nullptr;
+}
 } // namespace
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter();
@@ -56,8 +68,11 @@ int main (int argc, char** argv)
         std::cout << "map frame at 2x: " << (juce::Time::getMillisecondCounterHiRes() - start) / frames << " ms\n";
     }
 
+    if (mode.endsWithChar ('%'))
+        editor->setSize (juce::roundToInt (900 * mode.getFloatValue() / 100.0f), juce::roundToInt (600 * mode.getFloatValue() / 100.0f));
+
     if (mode == "list")
-        if (auto* listTab = dynamic_cast<juce::Button*> (editor->findChildWithID ("listTab")))
+        if (auto* listTab = dynamic_cast<juce::Button*> (findById (*editor, "listTab")))
             listTab->triggerClick();
 
     pumpMessages (0.3);
