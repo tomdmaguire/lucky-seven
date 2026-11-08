@@ -12,7 +12,10 @@ constexpr float selectionRingRadius = 17.0f;
 constexpr float minimumSpacing = 11.0f;
 constexpr int relaxIterations = 60;
 constexpr float hitRadius = 10.0f;
-constexpr int legendHeight = 30;
+constexpr float legendRowHeight = 24.0f;
+constexpr float legendPadding = 6.0f;
+constexpr float legendGap = 22.0f;
+constexpr float legendDotSpace = 14.0f;
 constexpr float axisMargin = 40.0f;
 
 constexpr float rankWeight = 0.7f;
@@ -58,6 +61,7 @@ void SoundMapView::setItems (std::vector<BrowserItem> newItems)
 
     secondsScale.build (std::move (logSeconds));
     brightnessScale.build (std::move (logBrightness));
+    updateLegendLayout();
 
     layoutDots();
     repaint();
@@ -168,7 +172,7 @@ void SoundMapView::setDecayRatio (float ratio)
 juce::Rectangle<float> SoundMapView::plotArea() const
 {
     auto area = getLocalBounds().toFloat();
-    area.removeFromBottom (static_cast<float> (legendHeight));
+    area.removeFromBottom (legendHeight);
     area.removeFromBottom (axisMargin * 0.6f);
     area.removeFromLeft (axisMargin);
     return area.reduced (18.0f, 30.0f);
@@ -285,8 +289,34 @@ int SoundMapView::dotAt (juce::Point<float> point) const
 
 bool SoundMapView::isShown (const Dot& dot) const
 {
-    return categoryFilter.empty() || categoryFilter.count (dot.item->entry.categoryIndex) > 0
-        || (dot.item->favourite && categoryFilter.count (theme::favouritesCategory) > 0);
+    const auto inFilter = categoryFilter.empty() || categoryFilter.count (dot.item->entry.categoryIndex) > 0
+                       || (dot.item->favourite && categoryFilter.count (theme::favouritesCategory) > 0);
+    return inFilter && matchesSearch (*dot.item, searchTerms);
+}
+
+void SoundMapView::setSearch (const juce::StringArray& terms)
+{
+    searchTerms = terms;
+    updateLegendCounts();
+    staticLayerDirty = true;
+    hoveredDot = -1;
+    repaint();
+}
+
+bool SoundMapView::selectFirstVisible()
+{
+    for (const auto& dot : dots)
+    {
+        if (! isShown (dot))
+            continue;
+
+        grabKeyboardFocus();
+        selectedId = dot.item->entry.id();
+        onSelect (selectedId);
+        repaint();
+        return true;
+    }
+    return false;
 }
 
 int SoundMapView::selectedDot() const
@@ -317,6 +347,13 @@ void SoundMapView::paint (juce::Graphics& g)
         renderStaticLayer (scale);
 
     g.drawImage (staticLayer, getLocalBounds().toFloat());
+
+    if (! searchTerms.isEmpty() && std::none_of (dots.begin(), dots.end(), [this] (const Dot& dot) { return isShown (dot); }))
+    {
+        g.setColour (theme::textDim);
+        g.setFont (theme::labelFont (12.0f));
+        g.drawText ("NO MATCHES", plotArea(), juce::Justification::centred);
+    }
 
     if (const auto active = selectedDot(); active >= 0 && isShown (dots[static_cast<size_t> (active)]))
         paintActivity (g, dots[static_cast<size_t> (active)].position,
@@ -421,39 +458,73 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
     g.drawText ("DARK", labelArea.withTrimmedTop (area.getHeight() - 14.0f), juce::Justification::centredLeft);
 }
 
-std::vector<SoundMapView::LegendEntry> SoundMapView::legendEntries() const
+void SoundMapView::updateLegendLayout()
 {
-    std::vector<LegendEntry> entries { { theme::favouritesCategory, "FAVOURITES", {} } };
+    legendLayout = { { theme::favouritesCategory, "FAVOURITES", {}, 0 } };
     for (const auto& item : items)
-        if (entries.back().categoryIndex != item.entry.categoryIndex)
-            entries.push_back ({ item.entry.categoryIndex, item.entry.category.toUpperCase(), {} });
+        if (legendLayout.back().categoryIndex != item.entry.categoryIndex)
+            legendLayout.push_back ({ item.entry.categoryIndex, item.entry.category.toUpperCase(), {}, 0 });
 
     const juce::Font font (theme::labelFont (10.0f));
-    constexpr auto gap = 22.0f;
-    constexpr auto dotSpace = 14.0f;
-    auto totalWidth = 0.0f;
-    for (const auto& entry : entries)
-        totalWidth += dotSpace + juce::GlyphArrangement::getStringWidth (font, entry.text) + gap;
+    const auto countWidth = juce::GlyphArrangement::getStringWidth (font, "  999");
+    const auto available = static_cast<float> (getWidth()) - 24.0f;
 
-    const auto legend = getLocalBounds().removeFromBottom (legendHeight).toFloat();
-    auto x = legend.getCentreX() - (totalWidth - gap) * 0.5f;
-    for (auto& entry : entries)
+    std::vector<std::vector<size_t>> rows (1);
+    std::vector<float> rowWidths (1, 0.0f);
+    for (size_t i = 0; i < legendLayout.size(); ++i)
     {
-        const auto width = dotSpace + juce::GlyphArrangement::getStringWidth (font, entry.text) + 4.0f;
-        entry.bounds = { x, legend.getY(), width, legend.getHeight() };
-        x += width - 4.0f + gap;
+        const auto width = legendDotSpace + juce::GlyphArrangement::getStringWidth (font, legendLayout[i].text) + countWidth;
+        legendLayout[i].bounds.setWidth (width);
+        const auto needed = rowWidths.back() + (rows.back().empty() ? 0.0f : legendGap) + width;
+        if (! rows.back().empty() && needed > available)
+        {
+            rows.emplace_back();
+            rowWidths.push_back (0.0f);
+        }
+        rowWidths.back() += (rows.back().empty() ? 0.0f : legendGap) + width;
+        rows.back().push_back (i);
     }
 
-    return entries;
+    legendHeight = static_cast<float> (rows.size()) * legendRowHeight + legendPadding;
+    auto y = static_cast<float> (getHeight()) - legendHeight + legendPadding * 0.5f;
+    for (size_t row = 0; row < rows.size(); ++row)
+    {
+        auto x = static_cast<float> (getWidth()) * 0.5f - rowWidths[row] * 0.5f;
+        for (const auto index : rows[row])
+        {
+            auto& bounds = legendLayout[index].bounds;
+            bounds = { x, y, bounds.getWidth(), legendRowHeight };
+            x += bounds.getWidth() + legendGap;
+        }
+        y += legendRowHeight;
+    }
+
+    updateLegendCounts();
+}
+
+void SoundMapView::updateLegendCounts()
+{
+    for (auto& entry : legendLayout)
+    {
+        entry.matches = 0;
+        for (const auto& item : items)
+        {
+            const auto inEntry = entry.categoryIndex == theme::favouritesCategory ? item.favourite
+                                                                                  : item.entry.categoryIndex == entry.categoryIndex;
+            if (inEntry && matchesSearch (item, searchTerms))
+                ++entry.matches;
+        }
+    }
 }
 
 void SoundMapView::paintLegend (juce::Graphics& g) const
 {
     g.setFont (theme::labelFont (10.0f));
 
-    for (const auto& entry : legendEntries())
+    const auto searching = ! searchTerms.isEmpty();
+    for (const auto& entry : legendLayout)
     {
-        const auto active = categoryFilter.empty() || categoryFilter.count (entry.categoryIndex) > 0;
+        const auto active = (categoryFilter.empty() || categoryFilter.count (entry.categoryIndex) > 0) && (! searching || entry.matches > 0);
         const auto selected = categoryFilter.count (entry.categoryIndex) > 0;
         const auto colour = theme::categoryColour (entry.categoryIndex);
         const auto dotCentre = juce::Point<float> { entry.bounds.getX() + 3.0f, entry.bounds.getCentreY() };
@@ -467,12 +538,14 @@ void SoundMapView::paintLegend (juce::Graphics& g) const
             g.drawEllipse (juce::Rectangle<float> (11.0f, 11.0f).withCentre (dotCentre), 1.0f);
 
         g.setColour (selected ? theme::text : (active ? theme::textDim : theme::textDim.withAlpha (0.4f)));
-        g.drawText (entry.text, entry.bounds.withTrimmedLeft (12.0f), juce::Justification::centredLeft);
+        g.drawText (searching ? entry.text + "  " + juce::String (entry.matches) : entry.text,
+                    entry.bounds.withTrimmedLeft (12.0f), juce::Justification::centredLeft);
     }
 }
 
 void SoundMapView::resized()
 {
+    updateLegendLayout();
     layoutDots();
 }
 
@@ -496,7 +569,7 @@ void SoundMapView::mouseDown (const juce::MouseEvent& event)
 {
     grabKeyboardFocus();
 
-    for (const auto& entry : legendEntries())
+    for (const auto& entry : legendLayout)
     {
         if (entry.bounds.expanded (4.0f, 0.0f).contains (event.position))
         {

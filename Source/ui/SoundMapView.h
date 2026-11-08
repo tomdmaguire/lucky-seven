@@ -7,7 +7,8 @@
 namespace lucky
 {
 
-/** Scatter of every program by decay time (x) and brightness (y); click a dot to load it, click legend entries to filter by category. */
+/** Scatter of every program by decay time (x) and brightness (y); click a dot to load it. The legend (wrapping onto more
+    rows as needed) filters by category, and a search narrows the dots further. */
 class SoundMapView final : public juce::Component,
                            public juce::TooltipClient,
                            private juce::Timer
@@ -29,6 +30,12 @@ public:
 
     /** Called after the user toggles a legend entry. */
     std::function<void (const std::set<int>&)> onFilterChanged;
+
+    /** Shows only programs matching every search word (combined with the legend filter); legend entries show match counts. */
+    void setSearch (const juce::StringArray& terms);
+
+    /** Selects the first program that is currently visible; returns false if none is. */
+    bool selectFirstVisible();
 
     /** Source of (input peak, reverb peak) since the last call; drives the ripples and the glow on the current dot. */
     void setLevelSource (std::function<std::pair<float, float>()> source);
@@ -73,9 +80,11 @@ private:
         int categoryIndex;
         juce::String text;
         juce::Rectangle<float> bounds;
+        int matches;
     };
 
-    std::vector<LegendEntry> legendEntries() const;
+    void updateLegendLayout();
+    void updateLegendCounts();
     bool isShown (const Dot& dot) const;
     juce::Rectangle<float> plotArea() const;
     float xForSeconds (float seconds) const;
@@ -98,6 +107,9 @@ private:
     int hoveredDot = -1;
     AxisScale secondsScale, brightnessScale;
     std::set<int> categoryFilter;
+    juce::StringArray searchTerms;
+    std::vector<LegendEntry> legendLayout;
+    float legendHeight = 30.0f;
     juce::Image staticLayer;
     float staticLayerScale = 1.0f;
     bool staticLayerDirty = true;

@@ -28,7 +28,7 @@ inline juce::Colour categoryColour (int categoryIndex)
     if (categoryIndex > 6)
     {
         const auto hue = std::fmod (0.08f + static_cast<float> (categoryIndex) * 0.61803f, 1.0f);
-        return juce::Colour::fromHSV (hue, 0.55f, 0.95f, 1.0f);
+        return juce::Colour::fromHSV (hue, 0.38f, 0.84f, 1.0f);
     }
 
     static const juce::Colour colours[] {

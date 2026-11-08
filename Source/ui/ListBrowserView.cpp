@@ -9,7 +9,6 @@ namespace
 constexpr int rowHeight = 28;
 constexpr int categoryColumnWidth = 190;
 constexpr int heartColumnWidth = 36;
-constexpr int searchHeight = 30;
 constexpr int allResultsCategory = -1;
 constexpr int categoryTagWidth = 110;
 
@@ -217,57 +216,16 @@ ListBrowserView::ListBrowserView (SelectionCallback callback, SelectionCallback 
 
     categoryList.setModel (categoryModel.get());
     programList.setModel (programModel.get());
-
-    searchBox.setComponentID ("search");
-    searchBox.setTextToShowWhenEmpty ("Search", theme::textDim);
-    searchBox.setFont (juce::FontOptions (14.0f));
-    searchBox.setIndents (30, 7);
-    searchBox.setColour (juce::TextEditor::backgroundColourId, theme::topBar);
-    searchBox.setColour (juce::TextEditor::textColourId, theme::text);
-    searchBox.setColour (juce::TextEditor::outlineColourId, theme::outline);
-    searchBox.setColour (juce::TextEditor::focusedOutlineColourId, theme::textDim);
-    searchBox.setColour (juce::TextEditor::highlightColourId, theme::text.withAlpha (0.2f));
-    searchBox.setColour (juce::CaretComponent::caretColourId, theme::text);
-    searchBox.onTextChange = [this] { applySearch(); };
-    searchBox.onEscapeKey = [this] { searchBox.clear(); applySearch(); };
-    searchBox.onReturnKey = [this]
-    {
-        if (programModel->getNumRows() > 0)
-        {
-            programList.grabKeyboardFocus();
-            programList.selectRow (0);
-        }
-    };
-    searchBox.addKeyListener (this);
-    addAndMakeVisible (searchBox);
-
-    clearSearchButton.setButtonText (juce::String::fromUTF8 ("\xc3\x97"));
-    clearSearchButton.getProperties().set ("round", true);
-    clearSearchButton.setTooltip ("Clear search");
-    clearSearchButton.onClick = [this] { searchBox.clear(); applySearch(); searchBox.grabKeyboardFocus(); };
-    addChildComponent (clearSearchButton);
 }
 
 ListBrowserView::~ListBrowserView()
 {
     categoryList.removeKeyListener (this);
     programList.removeKeyListener (this);
-    searchBox.removeKeyListener (this);
 }
 
 bool ListBrowserView::keyPressed (const juce::KeyPress& key, juce::Component* originator)
 {
-    if (originator == &searchBox)
-    {
-        if (key == juce::KeyPress::downKey && programModel->getNumRows() > 0)
-        {
-            programList.grabKeyboardFocus();
-            programList.selectRow (0);
-            return true;
-        }
-        return false;
-    }
-
     if (key == juce::KeyPress::rightKey && originator == &categoryList)
     {
         programList.grabKeyboardFocus();
@@ -309,15 +267,13 @@ void ListBrowserView::rebuildCategories()
     categoryList.repaint();
 }
 
-void ListBrowserView::applySearch()
+void ListBrowserView::setSearch (const juce::StringArray& terms)
 {
     const auto previousCategory = juce::isPositiveAndBelow (categoryList.getSelectedRow(), static_cast<int> (categories.size()))
                                       ? categories[static_cast<size_t> (categoryList.getSelectedRow())].first
                                       : allResultsCategory;
 
-    searchTerms = juce::StringArray::fromTokens (searchBox.getText().toLowerCase(), true);
-    searchTerms.removeEmptyStrings();
-    clearSearchButton.setVisible (searchBox.getText().isNotEmpty());
+    searchTerms = terms;
     rebuildCategories();
 
     if (! searchTerms.isEmpty())
@@ -346,16 +302,13 @@ void ListBrowserView::selectCategoryRow (int categoryRow)
     showCategory (categoryRow);
 }
 
-bool ListBrowserView::matchesSearch (const BrowserItem& item) const
+void ListBrowserView::focusFirstResult()
 {
-    if (searchTerms.isEmpty())
-        return true;
+    if (programModel->getNumRows() == 0)
+        return;
 
-    const auto haystack = (item.entry.name + " " + item.entry.category).toLowerCase();
-    for (const auto& term : searchTerms)
-        if (! haystack.contains (term))
-            return false;
-    return true;
+    programList.grabKeyboardFocus();
+    programList.selectRow (0);
 }
 
 bool ListBrowserView::showsMixedCategories() const
@@ -425,7 +378,7 @@ std::vector<const BrowserItem*> ListBrowserView::programsInCategory (int categor
         const auto inCategory = categoryIndex == allResultsCategory     ? true
                               : categoryIndex == theme::favouritesCategory ? item.favourite
                                                                            : item.entry.categoryIndex == categoryIndex;
-        if (inCategory && matchesSearch (item))
+        if (inCategory && matchesSearch (item, searchTerms))
             result.push_back (&item);
     }
 
@@ -441,11 +394,6 @@ void ListBrowserView::paint (juce::Graphics& g)
 
 void ListBrowserView::paintOverChildren (juce::Graphics& g)
 {
-    const auto icon = searchBox.getBounds().toFloat().removeFromLeft (30.0f).withSizeKeepingCentre (11.0f, 11.0f);
-    g.setColour (theme::textDim);
-    g.drawEllipse (icon.withTrimmedRight (3.0f).withTrimmedBottom (3.0f), 1.3f);
-    g.drawLine (icon.getRight() - 4.0f, icon.getBottom() - 4.0f, icon.getRight(), icon.getBottom(), 1.3f);
-
     if (programModel->getNumRows() == 0 && ! searchTerms.isEmpty())
     {
         g.setColour (theme::textDim);
@@ -456,11 +404,7 @@ void ListBrowserView::paintOverChildren (juce::Graphics& g)
 
 void ListBrowserView::resized()
 {
-    auto bounds = getLocalBounds().reduced (0, 12);
-    auto searchRow = bounds.removeFromTop (searchHeight).withTrimmedLeft (8).withTrimmedRight (12);
-    searchBox.setBounds (searchRow);
-    clearSearchButton.setBounds (searchRow.removeFromRight (searchHeight).reduced (3));
-    bounds.removeFromTop (10);
+    auto bounds = getLocalBounds().reduced (0, 6);
 
     categoryList.setBounds (bounds.removeFromLeft (categoryColumnWidth).withTrimmedLeft (8));
     bounds.removeFromLeft (25);
