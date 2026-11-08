@@ -21,6 +21,7 @@ public:
     void setItems (const std::vector<BrowserItem>& items);
     void setSelectedId (const juce::String& id);
     void setDecayRatio (float ratio);
+    void setLevelSource (std::function<std::pair<float, float>()> source) { map.setLevelSource (std::move (source)); }
     void setView (View view);
 
     void resized() override;

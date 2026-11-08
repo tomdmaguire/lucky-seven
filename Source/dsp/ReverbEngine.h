@@ -37,6 +37,9 @@ public:
     /** Hands a new impulse response to the convolvers; call from a single non-audio thread. */
     void loadIr (TrueStereoIr&& ir);
 
+    /** Highest input and reverb peaks since the last call, then resets them; safe to call from the UI thread. */
+    std::pair<float, float> takePeaks() noexcept { return { inputPeak.exchange (0.0f), wetPeak.exchange (0.0f) }; }
+
     /** Length in samples of the IR currently in use, or 0 before one has loaded. */
     int getCurrentIrSize() const { return fromLeft.getCurrentIRSize(); }
 
@@ -62,6 +65,7 @@ private:
     double currentSampleRate = 48000.0;
     int capacity = 0;
     juce::int64 silentSamples = 0;
+    std::atomic<float> inputPeak { 0.0f }, wetPeak { 0.0f };
 };
 
 } // namespace lucky

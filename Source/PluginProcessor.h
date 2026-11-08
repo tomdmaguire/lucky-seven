@@ -58,6 +58,9 @@ public:
     /** Untouched mid-band T60 of the loaded program in seconds. */
     float getOriginalT60() const noexcept { return loader->getOriginalT60(); }
 
+    /** Input and reverb peaks since the last call, for the UI's activity display. */
+    std::pair<float, float> takePeaks() noexcept { return engine.takePeaks(); }
+
     juce::AudioProcessorValueTreeState& getParameters() noexcept { return parameters; }
     lucky::IrCatalogue& getCatalogue() noexcept { return *catalogue; }
 

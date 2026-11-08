@@ -9,7 +9,8 @@ namespace lucky
 
 /** Scatter of every program by decay time (x) and brightness (y); click a dot to load it, click legend entries to filter by category. */
 class SoundMapView final : public juce::Component,
-                           public juce::TooltipClient
+                           public juce::TooltipClient,
+                           private juce::Timer
 {
 public:
     explicit SoundMapView (SelectionCallback onSelect);
@@ -23,6 +24,9 @@ public:
     /** Moves the ghost marker that shows the effective decay of the current program. */
     void setDecayRatio (float ratio);
 
+    /** Source of (input peak, reverb peak) since the last call; drives the ripples and the glow on the current dot. */
+    void setLevelSource (std::function<std::pair<float, float>()> source);
+
     void paint (juce::Graphics&) override;
     void resized() override;
     void mouseMove (const juce::MouseEvent&) override;
@@ -30,6 +34,7 @@ public:
     void mouseDown (const juce::MouseEvent&) override;
     bool keyPressed (const juce::KeyPress&) override;
     juce::String getTooltip() override;
+    void visibilityChanged() override;
 
 private:
     struct Dot
@@ -46,6 +51,16 @@ private:
         void build (std::vector<float> logValues);
         float normalise (float value) const;
     };
+
+    struct Ripple
+    {
+        float age, life, strength;
+    };
+
+    void timerCallback() override;
+    void updateActivityTimer();
+    float effectiveDecaySeconds() const;
+    void paintActivity (juce::Graphics&, juce::Point<float> centre, juce::Colour colour) const;
 
     struct LegendEntry
     {
@@ -64,6 +79,7 @@ private:
     int selectedDot() const;
     void paintAxes (juce::Graphics&, juce::Rectangle<float> area) const;
     void paintLegend (juce::Graphics&) const;
+    void renderStaticLayer (float scale);
 
     SelectionCallback onSelect;
     std::vector<BrowserItem> items;
@@ -73,6 +89,12 @@ private:
     int hoveredDot = -1;
     AxisScale secondsScale, brightnessScale;
     std::set<int> categoryFilter;
+    juce::Image staticLayer;
+    float staticLayerScale = 1.0f;
+    bool staticLayerDirty = true;
+    std::function<std::pair<float, float>()> levelSource;
+    std::vector<Ripple> ripples;
+    float glow = 0.0f, inputEnvelope = 0.0f, secondsSinceRipple = 1.0f;
 };
 
 } // namespace lucky

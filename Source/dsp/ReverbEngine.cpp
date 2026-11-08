@@ -11,6 +11,12 @@ constexpr double gainSmoothingSeconds = 0.03;
 constexpr int filterUpdateInterval = 16;
 constexpr float butterworthQ = 0.70710678f;
 constexpr float silenceThreshold = 1.0e-6f;
+
+void holdPeak (std::atomic<float>& peak, float value) noexcept
+{
+    if (value > peak.load (std::memory_order_relaxed))
+        peak.store (value, std::memory_order_relaxed);
+}
 constexpr float openLowCutHz = ReverbEngine::minCutHz + 0.5f;
 constexpr float openHighCutHz = ReverbEngine::maxCutHz - 1.0f;
 } // namespace
@@ -158,8 +164,13 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
 
     auto ioBlock = juce::dsp::AudioBlock<float> (buffer).getSubBlock (static_cast<size_t> (start), static_cast<size_t> (length))
                                                          .getSubsetChannelBlock (0, static_cast<size_t> (numChannels));
+    auto blockInputPeak = 0.0f;
     for (int ch = 0; ch < numChannels; ++ch)
+    {
         dryBus.copyFrom (ch, 0, buffer, ch, start, length);
+        blockInputPeak = std::max (blockInputPeak, buffer.getMagnitude (ch, start, length));
+    }
+    holdPeak (inputPeak, blockInputPeak);
 
     const auto* inLeft = buffer.getReadPointer (0, start);
     const auto* inRight = buffer.getReadPointer (numChannels - 1, start);
@@ -206,6 +217,11 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
     }
 
     filterWet (ioBlock);
+
+    auto blockWetPeak = 0.0f;
+    for (int ch = 0; ch < numChannels; ++ch)
+        blockWetPeak = std::max (blockWetPeak, buffer.getMagnitude (ch, start, length));
+    holdPeak (wetPeak, blockWetPeak * wetGain.getTargetValue());
 
     applyOutputGains (buffer, start, length, numChannels);
 }

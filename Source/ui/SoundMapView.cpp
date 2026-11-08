@@ -19,6 +19,19 @@ constexpr float rankWeight = 0.7f;
 constexpr float edgePadding = 0.03f;
 constexpr float minimumTickSpacing = 44.0f;
 
+constexpr int activityFrameRate = 30;
+constexpr float activityDt = 1.0f / activityFrameRate;
+constexpr size_t maxRipples = 8;
+constexpr float floorDb = -54.0f;
+constexpr float onsetJump = 0.1f;
+constexpr float minRippleGapSeconds = 0.09f;
+
+/** Maps a linear peak onto 0..1 over the last 54 dB. */
+float normalisedLevel (float peak)
+{
+    return juce::jlimit (0.0f, 1.0f, (juce::Decibels::gainToDecibels (peak, floorDb) - floorDb) / -floorDb);
+}
+
 const std::array<float, 12> secondsTicks { 0.25f, 0.5f, 0.75f, 1.0f, 1.5f, 2.0f, 2.5f, 3.0f, 4.0f, 6.0f, 8.0f, 16.0f };
 } // namespace
 
@@ -53,6 +66,86 @@ void SoundMapView::setSelectedId (const juce::String& id)
 {
     selectedId = id;
     repaint();
+}
+
+void SoundMapView::setLevelSource (std::function<std::pair<float, float>()> source)
+{
+    levelSource = std::move (source);
+    updateActivityTimer();
+}
+
+void SoundMapView::visibilityChanged()
+{
+    updateActivityTimer();
+}
+
+void SoundMapView::updateActivityTimer()
+{
+    if (levelSource != nullptr && isVisible())
+        startTimerHz (activityFrameRate);
+    else
+        stopTimer();
+}
+
+float SoundMapView::effectiveDecaySeconds() const
+{
+    const auto selected = selectedDot();
+    if (selected < 0 || ! dots[static_cast<size_t> (selected)].item->profile)
+        return 1.0f;
+    return dots[static_cast<size_t> (selected)].item->profile->midT60 * decayRatio;
+}
+
+void SoundMapView::timerCallback()
+{
+    const auto [inputPeak, wetPeak] = levelSource();
+    const auto input = normalisedLevel (inputPeak);
+    const auto wet = normalisedLevel (wetPeak);
+    const auto wasActive = glow > 0.001f || ! ripples.empty();
+
+    glow = wet > glow ? glow + (wet - glow) * 0.6f : glow * 0.9f;
+    if (glow < 0.002f)
+        glow = 0.0f;
+
+    secondsSinceRipple += activityDt;
+    if (input - inputEnvelope > onsetJump && input > 0.2f && secondsSinceRipple > minRippleGapSeconds)
+    {
+        if (ripples.size() >= maxRipples)
+            ripples.erase (ripples.begin());
+
+        ripples.push_back ({ 0.0f, juce::jlimit (0.35f, 6.0f, effectiveDecaySeconds()), input });
+        secondsSinceRipple = 0.0f;
+    }
+    inputEnvelope = std::max (input, inputEnvelope * 0.82f);
+
+    for (auto& ripple : ripples)
+        ripple.age += activityDt;
+    ripples.erase (std::remove_if (ripples.begin(), ripples.end(), [] (const Ripple& r) { return r.age >= r.life; }), ripples.end());
+
+    if (wasActive || glow > 0.0f || ! ripples.empty())
+        repaint();
+}
+
+void SoundMapView::paintActivity (juce::Graphics& g, juce::Point<float> centre, juce::Colour colour) const
+{
+    for (const auto& ripple : ripples)
+    {
+        const auto progress = ripple.age / ripple.life;
+        const auto reach = juce::jmap (std::min (ripple.life, 4.0f), 0.35f, 4.0f, 70.0f, 240.0f);
+        const auto radius = 14.0f + reach * (1.0f - std::pow (1.0f - progress, 2.4f));
+        const auto alpha = ripple.strength * std::pow (1.0f - progress, 1.6f) * 0.6f;
+        g.setColour (colour.withAlpha (alpha));
+        g.drawEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre), 0.8f + 1.6f * (1.0f - progress));
+    }
+
+    if (glow > 0.0f)
+    {
+        const auto outer = 10.0f + 30.0f * glow;
+        g.setColour (colour.withAlpha (0.06f + 0.16f * glow));
+        g.fillEllipse (juce::Rectangle<float> (outer * 2.0f, outer * 2.0f).withCentre (centre));
+        const auto inner = 8.0f + 14.0f * glow;
+        g.setColour (colour.withAlpha (0.12f + 0.3f * glow));
+        g.fillEllipse (juce::Rectangle<float> (inner * 2.0f, inner * 2.0f).withCentre (centre));
+    }
 }
 
 void SoundMapView::setDecayRatio (float ratio)
@@ -120,6 +213,7 @@ float SoundMapView::yForBrightness (float hertz) const
 
 void SoundMapView::layoutDots()
 {
+    staticLayerDirty = true;
     dots.clear();
     for (const auto& item : items)
     {
@@ -209,26 +303,22 @@ void SoundMapView::paint (juce::Graphics& g)
         return;
     }
 
-    paintAxes (g, area);
+    const auto scale = g.getInternalContext().getPhysicalPixelScaleFactor();
+    if (staticLayerDirty || staticLayer.isNull() || ! juce::approximatelyEqual (scale, staticLayerScale)
+        || staticLayer.getWidth() != juce::roundToInt (static_cast<float> (getWidth()) * scale))
+        renderStaticLayer (scale);
 
-    for (const auto& dot : dots)
+    g.drawImage (staticLayer, getLocalBounds().toFloat());
+
+    if (const auto active = selectedDot(); active >= 0 && isShown (dots[static_cast<size_t> (active)]))
+        paintActivity (g, dots[static_cast<size_t> (active)].position,
+                       theme::categoryColour (dots[static_cast<size_t> (active)].item->entry.categoryIndex));
+
+    if (juce::isPositiveAndBelow (hoveredDot, static_cast<int> (dots.size())) && isShown (dots[static_cast<size_t> (hoveredDot)]))
     {
-        if (! isShown (dot))
-            continue;
-
-        g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (0.12f));
-        g.fillEllipse (juce::Rectangle<float> (glowRadius * 2.0f, glowRadius * 2.0f).withCentre (dot.position));
-    }
-
-    for (size_t i = 0; i < dots.size(); ++i)
-    {
-        const auto& dot = dots[i];
-        if (! isShown (dot))
-            continue;
-
-        const auto hovered = static_cast<int> (i) == hoveredDot;
-        const auto radius = hovered ? dotRadius + 2.0f : dotRadius;
-        g.setColour (theme::categoryColour (dot.item->entry.categoryIndex).withAlpha (hovered ? 1.0f : 0.9f));
+        const auto& dot = dots[static_cast<size_t> (hoveredDot)];
+        const auto radius = dotRadius + 2.0f;
+        g.setColour (theme::categoryColour (dot.item->entry.categoryIndex));
         g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (dot.position));
     }
 
@@ -265,6 +355,32 @@ void SoundMapView::paint (juce::Graphics& g)
         g.drawRoundedRectangle (labelBounds.reduced (0.5f), labelBounds.getHeight() * 0.5f, 1.0f);
         g.setColour (theme::text);
         g.drawText (label, labelBounds, juce::Justification::centred);
+    }
+
+}
+
+void SoundMapView::renderStaticLayer (float scale)
+{
+    staticLayerScale = scale;
+    staticLayerDirty = false;
+    staticLayer = juce::Image (juce::Image::ARGB, std::max (1, juce::roundToInt (static_cast<float> (getWidth()) * scale)),
+                               std::max (1, juce::roundToInt (static_cast<float> (getHeight()) * scale)), true);
+
+    juce::Graphics g (staticLayer);
+    g.addTransform (juce::AffineTransform::scale (scale));
+    g.fillAll (theme::background);
+    paintAxes (g, plotArea());
+
+    for (const auto& dot : dots)
+    {
+        if (! isShown (dot))
+            continue;
+
+        const auto colour = theme::categoryColour (dot.item->entry.categoryIndex);
+        g.setColour (colour.withAlpha (0.12f));
+        g.fillEllipse (juce::Rectangle<float> (glowRadius * 2.0f, glowRadius * 2.0f).withCentre (dot.position));
+        g.setColour (colour.withAlpha (0.9f));
+        g.fillEllipse (juce::Rectangle<float> (dotRadius * 2.0f, dotRadius * 2.0f).withCentre (dot.position));
     }
 
     paintLegend (g);
@@ -379,6 +495,7 @@ void SoundMapView::mouseDown (const juce::MouseEvent& event)
             if (! categoryFilter.erase (entry.categoryIndex))
                 categoryFilter.insert (entry.categoryIndex);
 
+            staticLayerDirty = true;
             hoveredDot = -1;
             repaint();
             return;

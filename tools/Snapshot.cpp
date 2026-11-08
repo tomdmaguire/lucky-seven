@@ -28,7 +28,35 @@ int main (int argc, char** argv)
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor->createEditorAndMakeActive());
     pumpMessages (1.5);
 
-    if (argc > 2 && juce::String (argv[2]) == "list")
+    const juce::String mode = argc > 2 ? argv[2] : "";
+
+    if (mode == "active")
+    {
+        juce::AudioBuffer<float> block (2, 512);
+        juce::MidiBuffer midi;
+        juce::Random random (5);
+        for (int step = 0; step < 50; ++step)
+        {
+            block.clear();
+            if (step % 12 == 0 || step == 47)
+                for (int ch = 0; ch < 2; ++ch)
+                    for (int i = 0; i < 512; ++i)
+                        block.setSample (ch, i, (random.nextFloat() - 0.5f) * std::exp (-static_cast<float> (i) / 120.0f));
+            processor->processBlock (block, midi);
+            pumpMessages (0.033);
+        }
+    }
+
+    if (mode == "timing")
+    {
+        const auto start = juce::Time::getMillisecondCounterHiRes();
+        constexpr int frames = 100;
+        for (int frame = 0; frame < frames; ++frame)
+            editor->createComponentSnapshot (editor->getLocalBounds().withTrimmedTop (48).withTrimmedBottom (156), true, 2.0f);
+        std::cout << "map frame at 2x: " << (juce::Time::getMillisecondCounterHiRes() - start) / frames << " ms\n";
+    }
+
+    if (mode == "list")
         if (auto* listTab = dynamic_cast<juce::Button*> (editor->findChildWithID ("listTab")))
             listTab->triggerClick();
 

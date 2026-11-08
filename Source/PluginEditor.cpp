@@ -41,6 +41,7 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
 {
     setLookAndFeel (&lookAndFeel.get());
     addAndMakeVisible (browser);
+    browser.setLevelSource ([this] { return audioProcessor.takePeaks(); });
 
     for (auto* tab : { &mapTab, &listTab })
     {
