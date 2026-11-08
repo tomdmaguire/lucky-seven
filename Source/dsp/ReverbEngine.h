@@ -11,6 +11,8 @@ class ReverbEngine
 {
 public:
     static constexpr float maxPredelayMs = 250.0f;
+    static constexpr float minCutHz = 20.0f;
+    static constexpr float maxCutHz = 20000.0f;
 
     ReverbEngine();
 
@@ -26,6 +28,9 @@ public:
     /** Sets the wet proportion between 0 and 1. */
     void setMix (float wetProportion);
 
+    /** Sets the 24 dB/oct low and high cut applied to the reverb signal only. */
+    void setWetFilter (float lowCutHz, float highCutHz);
+
     /** Hands a new impulse response to the convolvers; call from a single non-audio thread. */
     void loadIr (TrueStereoIr&& ir);
 
@@ -34,12 +39,17 @@ public:
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int length);
+    void filterWet (juce::dsp::AudioBlock<float> wet);
+
+    using Filter = juce::dsp::StateVariableTPTFilter<float>;
 
     juce::dsp::ConvolutionMessageQueue queue;
     juce::dsp::Convolution fromLeft, fromRight;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> predelay;
     juce::dsp::DryWetMixer<float> mixer;
     juce::SmoothedValue<float> predelaySamples;
+    std::array<Filter, 2> lowCuts, highCuts;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> lowCutHz { minCutHz }, highCutHz { maxCutHz };
     juce::AudioBuffer<float> leftBus, rightBus;
     double currentSampleRate = 48000.0;
     int capacity = 0;

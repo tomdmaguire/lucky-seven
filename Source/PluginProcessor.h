@@ -11,6 +11,8 @@ public:
     static inline const juce::String predelayId { "predelay" };
     static inline const juce::String decayId { "decay" };
     static inline const juce::String mixId { "mix" };
+    static inline const juce::String lowCutId { "lowCut" };
+    static inline const juce::String highCutId { "highCut" };
     static inline const juce::Identifier irIdProperty { "irId" };
     static inline const juce::Identifier viewProperty { "view" };
 
@@ -63,6 +65,8 @@ private:
     std::unique_ptr<lucky::IrLoader> loader;
     std::atomic<float>* predelayMs = nullptr;
     std::atomic<float>* mixPercent = nullptr;
+    std::atomic<float>* lowCutHz = nullptr;
+    std::atomic<float>* highCutHz = nullptr;
     double hostSampleRate = 48000.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenProcessor)

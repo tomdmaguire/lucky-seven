@@ -14,6 +14,8 @@ LuckySevenProcessor::LuckySevenProcessor()
 {
     predelayMs = parameters.getRawParameterValue (predelayId);
     mixPercent = parameters.getRawParameterValue (mixId);
+    lowCutHz = parameters.getRawParameterValue (lowCutId);
+    highCutHz = parameters.getRawParameterValue (highCutId);
     loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId));
     selectIr (defaultIrId);
 }
@@ -28,6 +30,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
     using Range = juce::NormalisableRange<float>;
     const auto msLabel = juce::AudioParameterFloatAttributes().withLabel ("ms");
     const auto percentLabel = juce::AudioParameterFloatAttributes().withLabel ("%");
+    const auto hertzLabel = juce::AudioParameterFloatAttributes().withLabel ("Hz");
+    const auto frequencyRange = Range (lucky::ReverbEngine::minCutHz, lucky::ReverbEngine::maxCutHz,
+        [] (float start, float end, float proportion) { return start * std::pow (end / start, proportion); },
+        [] (float start, float end, float value) { return std::log (value / start) / std::log (end / start); },
+        [] (float, float, float value) { return value; });
 
     return {
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { predelayId, 1 }, "Pre-delay",
@@ -36,6 +43,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
                                                      Range (10.0f, 100.0f, 0.1f), 100.0f, percentLabel),
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { mixId, 1 }, "Mix",
                                                      Range (0.0f, 100.0f, 0.1f), 30.0f, percentLabel),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { lowCutId, 1 }, "Low Cut",
+                                                     frequencyRange, lucky::ReverbEngine::minCutHz, hertzLabel),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { highCutId, 1 }, "High Cut",
+                                                     frequencyRange, lucky::ReverbEngine::maxCutHz, hertzLabel),
     };
 }
 
@@ -68,6 +79,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     engine.setPredelayMs (predelayMs->load());
     engine.setMix (mixPercent->load() / 100.0f);
+    engine.setWetFilter (lowCutHz->load(), highCutHz->load());
     engine.process (buffer);
 }
 

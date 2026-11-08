@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/BrowserPanel.h"
+#include "ui/EqView.h"
 #include "ui/LookAndFeel.h"
 
 class LuckySevenEditor final : public juce::AudioProcessorEditor,
@@ -36,6 +37,8 @@ private:
     lucky::BrowserPanel browser;
     juce::TextButton folderButton { "IR folder..." };
     Knob predelay, decay, mix;
+    lucky::EqView eq;
+    juce::Label eqLabel;
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;

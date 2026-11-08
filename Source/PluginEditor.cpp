@@ -3,10 +3,11 @@
 
 namespace
 {
-constexpr int editorWidth = 780;
+constexpr int editorWidth = 860;
 constexpr int editorHeight = 560;
 constexpr int headerHeight = 52;
-constexpr int knobRowHeight = 132;
+constexpr int knobRowHeight = 140;
+constexpr int eqWidth = 300;
 constexpr int margin = 16;
 } // namespace
 
@@ -18,7 +19,9 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
                {
                    audioProcessor.getParameters().state.setProperty (LuckySevenProcessor::viewProperty,
                                                                      lucky::BrowserPanel::viewToString (view), nullptr);
-               })
+               }),
+      eq (*p.getParameters().getParameter (LuckySevenProcessor::lowCutId),
+          *p.getParameters().getParameter (LuckySevenProcessor::highCutId))
 {
     setLookAndFeel (&lookAndFeel);
 
@@ -33,6 +36,13 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     setupKnob (predelay, LuckySevenProcessor::predelayId, "PRE-DELAY");
     setupKnob (decay, LuckySevenProcessor::decayId, "DECAY");
     setupKnob (mix, LuckySevenProcessor::mixId, "MIX");
+
+    eqLabel.setText ("REVERB EQ", juce::dontSendNotification);
+    eqLabel.setJustificationType (juce::Justification::centred);
+    eqLabel.setFont (juce::FontOptions (12.0f, juce::Font::bold));
+    eqLabel.setColour (juce::Label::textColourId, lucky::theme::textDim);
+    addAndMakeVisible (eqLabel);
+    addAndMakeVisible (eq);
 
     predelay.slider.textFromValueFunction = [] (double ms) { return juce::String (juce::roundToInt (ms)) + " ms"; };
     mix.slider.textFromValueFunction = [] (double percent) { return juce::String (juce::roundToInt (percent)) + "%"; };
@@ -154,13 +164,20 @@ void LuckySevenEditor::resized()
     folderButton.setBounds (header.removeFromRight (110));
 
     auto knobRow = bounds.removeFromBottom (knobRowHeight).reduced (margin, 8);
-    const auto knobWidth = knobRow.getWidth() / 3;
-    for (auto* knob : { &predelay, &decay, &mix })
+    const auto knobWidth = (knobRow.getWidth() - eqWidth) / 3;
+    const auto placeKnob = [&] (Knob& knob)
     {
         auto slot = knobRow.removeFromLeft (knobWidth);
-        knob->label.setBounds (slot.removeFromTop (18));
-        knob->slider.setBounds (slot.withSizeKeepingCentre (130, slot.getHeight()));
-    }
+        knob.label.setBounds (slot.removeFromTop (18));
+        knob.slider.setBounds (slot.withSizeKeepingCentre (130, slot.getHeight()));
+    };
+
+    placeKnob (predelay);
+    placeKnob (decay);
+    auto eqSlot = knobRow.removeFromLeft (eqWidth);
+    eqLabel.setBounds (eqSlot.removeFromTop (18));
+    eq.setBounds (eqSlot.reduced (0, 4));
+    placeKnob (mix);
 
     browser.setBounds (bounds.reduced (margin, 0));
 }
