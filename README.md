@@ -1,6 +1,6 @@
 # Lucky Seven
 
-A free true-stereo convolution reverb (VST3) built around the Bricasti M7 impulse responses, with a decay control, a sound map for browsing programs, and quick ways to blend reverb in.
+A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7 impulse responses, with a decay control, a sound map for browsing programs, and quick ways to blend reverb in.
 
 ## Features
 
