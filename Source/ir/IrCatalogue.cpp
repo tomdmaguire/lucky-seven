@@ -99,6 +99,9 @@ juce::Array<juce::File> IrCatalogue::getExtraRoots() const
     if (juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_IR_ROOT_OVERRIDE", {}).isNotEmpty())
         return {};
 
+    if (const auto extra = juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_EXTRA_IR_ROOT", {}); extra.isNotEmpty())
+        return { juce::File (extra) };
+
     const juce::ScopedLock scope (lock);
     juce::Array<juce::File> folders;
     for (const auto& path : juce::StringArray::fromLines (settings.getUserSettings()->getValue (extraRootsKey)))
@@ -283,7 +286,7 @@ juce::String IrCatalogue::cacheKey (const IrEntry& entry)
              + juce::String (file.getLastModificationTime().toMilliseconds());
     };
 
-    const auto key = describe (entry.fileForRate (analysisRate));
+    const auto key = "v2|" + describe (entry.fileForRate (analysisRate));
     return entry.isPair() ? key + "|" + describe (entry.rightFile) : key;
 }
 
