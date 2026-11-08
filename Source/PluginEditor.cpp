@@ -178,23 +178,26 @@ void LuckySevenEditor::showOutputMode (int mode)
         modeButtons[i].setToggleState (static_cast<int> (i) == mode, juce::dontSendNotification);
 
     mix.attachment.reset();
-    if (mode == 1)
+
+    if (mode == 2)
     {
-        mix.slider.textFromValueFunction = [] (double db)
-        {
-            return db <= LuckySevenProcessor::blendSilentDb ? juce::String ("-INF") : juce::String (db, 1) + " dB";
-        };
-        mix.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-            audioProcessor.getParameters(), LuckySevenProcessor::blendId, mix.slider);
+        mix.slider.setRange (0.0, 100.0);
+        mix.slider.setValue (100.0, juce::dontSendNotification);
+        mix.slider.textFromValueFunction = [] (double) { return juce::String ("100%"); };
     }
     else
     {
-        mix.slider.textFromValueFunction = [mode] (double percent)
-        {
-            return mode == 2 ? juce::String ("WET") : juce::String (juce::roundToInt (percent)) + "%";
-        };
+        const auto& parameterId = mode == 1 ? LuckySevenProcessor::blendId : LuckySevenProcessor::mixId;
         mix.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
-            audioProcessor.getParameters(), LuckySevenProcessor::mixId, mix.slider);
+            audioProcessor.getParameters(), parameterId, mix.slider);
+
+        if (mode == 1)
+            mix.slider.textFromValueFunction = [] (double db)
+            {
+                return db <= LuckySevenProcessor::blendSilentDb ? juce::String ("-INF dB") : juce::String (db, 1) + " dB";
+            };
+        else
+            mix.slider.textFromValueFunction = [] (double percent) { return juce::String (juce::roundToInt (percent)) + "%"; };
     }
 
     mix.slider.setEnabled (mode != 2);
