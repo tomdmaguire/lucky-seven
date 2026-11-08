@@ -45,6 +45,10 @@ set(LUCKY_SEVEN_CORE_SOURCES
 target_sources(LuckySeven PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp
+    Source/ui/LookAndFeel.cpp
+    Source/ui/ListBrowserView.cpp
+    Source/ui/SoundMapView.cpp
+    Source/ui/BrowserPanel.cpp
     ${LUCKY_SEVEN_CORE_SOURCES}
 )
 

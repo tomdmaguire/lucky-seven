@@ -10,6 +10,7 @@ const juce::Identifier rootKey { "irRoot" };
 juce::File cacheFile()
 {
     return juce::File::getSpecialLocation (juce::File::userApplicationDataDirectory)
+        .getChildFile ("Application Support")
         .getChildFile ("Lucky Seven")
         .getChildFile ("analysis.json");
 }
