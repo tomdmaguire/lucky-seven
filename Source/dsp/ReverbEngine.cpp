@@ -5,16 +5,18 @@ namespace lucky
 
 namespace
 {
-constexpr int convolutionHeadSize = 1024;
 constexpr double predelaySmoothingSeconds = 0.05;
 constexpr double filterSmoothingSeconds = 0.03;
 constexpr int filterUpdateInterval = 16;
 constexpr std::array<float, 2> butterworthQ { 0.5412f, 1.3066f };
+constexpr float silenceThreshold = 1.0e-6f;
+constexpr float openLowCutHz = ReverbEngine::minCutHz + 0.5f;
+constexpr float openHighCutHz = ReverbEngine::maxCutHz - 1.0f;
 } // namespace
 
-ReverbEngine::ReverbEngine()
-    : fromLeft (juce::dsp::Convolution::NonUniform { convolutionHeadSize }, queue),
-      fromRight (juce::dsp::Convolution::NonUniform { convolutionHeadSize }, queue)
+ReverbEngine::ReverbEngine (int headSize)
+    : fromLeft (juce::dsp::Convolution::NonUniform { headSize }, queue),
+      fromRight (juce::dsp::Convolution::NonUniform { headSize }, queue)
 {
     mixer.setMixingRule (juce::dsp::DryWetMixingRule::linear);
 }
@@ -64,6 +66,8 @@ void ReverbEngine::reset()
     for (auto* filters : { &lowCuts, &highCuts })
         for (auto& filter : *filters)
             filter.reset();
+
+    silentSamples = 0;
 }
 
 void ReverbEngine::setPredelayMs (float milliseconds)
@@ -87,6 +91,10 @@ void ReverbEngine::setWetFilter (float lowCut, float highCut)
 void ReverbEngine::filterWet (juce::dsp::AudioBlock<float> wet)
 {
     const auto length = static_cast<int> (wet.getNumSamples());
+    const auto fullyOpen = ! lowCutHz.isSmoothing() && ! highCutHz.isSmoothing()
+                        && lowCutHz.getTargetValue() <= openLowCutHz && highCutHz.getTargetValue() >= openHighCutHz;
+    if (fullyOpen)
+        return;
 
     for (int start = 0; start < length; start += filterUpdateInterval)
     {
@@ -119,8 +127,29 @@ void ReverbEngine::loadIr (TrueStereoIr&& ir)
                                    juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::no);
 }
 
+bool ReverbEngine::isIdle (const juce::AudioBuffer<float>& buffer)
+{
+    auto peak = 0.0f;
+    for (int ch = 0; ch < std::min (buffer.getNumChannels(), 2); ++ch)
+        peak = std::max (peak, buffer.getMagnitude (ch, 0, buffer.getNumSamples()));
+
+    if (peak >= silenceThreshold)
+    {
+        silentSamples = 0;
+        return false;
+    }
+
+    silentSamples += buffer.getNumSamples();
+    const auto tailSamples = static_cast<juce::int64> (getCurrentIrSize())
+                           + static_cast<juce::int64> (maxPredelayMs * 0.001 * currentSampleRate) + capacity;
+    return silentSamples > tailSamples && ! predelaySamples.isSmoothing();
+}
+
 void ReverbEngine::process (juce::AudioBuffer<float>& buffer)
 {
+    if (isIdle (buffer))
+        return;
+
     for (int start = 0; start < buffer.getNumSamples(); start += capacity)
         processChunk (buffer, start, std::min (capacity, buffer.getNumSamples() - start));
 }
@@ -142,9 +171,15 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
     auto* rightL = rightBus.getWritePointer (0);
     auto* rightR = rightBus.getWritePointer (1);
 
+    const auto smoothing = predelaySamples.isSmoothing();
+    if (! smoothing)
+        predelay.setDelay (predelaySamples.getTargetValue());
+
     for (int i = 0; i < length; ++i)
     {
-        predelay.setDelay (predelaySamples.getNextValue());
+        if (smoothing)
+            predelay.setDelay (predelaySamples.getNextValue());
+
         predelay.pushSample (0, inLeft[i]);
         predelay.pushSample (1, inRight[i]);
         leftL[i] = leftR[i] = predelay.popSample (0);

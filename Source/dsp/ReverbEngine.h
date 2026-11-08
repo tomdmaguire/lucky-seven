@@ -14,7 +14,10 @@ public:
     static constexpr float minCutHz = 20.0f;
     static constexpr float maxCutHz = 20000.0f;
 
-    ReverbEngine();
+    static constexpr int defaultHeadSize = 4096;
+
+    /** headSize is the first-stage partition size of the non-uniform convolution. */
+    explicit ReverbEngine (int headSize = defaultHeadSize);
 
     /** Allocates buffers for the given sample rate and maximum block size. */
     void prepare (double sampleRate, int maximumBlockSize);
@@ -34,12 +37,16 @@ public:
     /** Hands a new impulse response to the convolvers; call from a single non-audio thread. */
     void loadIr (TrueStereoIr&& ir);
 
-    /** Processes a mono or stereo buffer in place. */
+    /** Length in samples of the IR currently in use, or 0 before one has loaded. */
+    int getCurrentIrSize() const { return fromLeft.getCurrentIRSize(); }
+
+    /** Processes a mono or stereo buffer in place; skips all work once the input has been silent for longer than the tail. */
     void process (juce::AudioBuffer<float>& buffer);
 
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int length);
     void filterWet (juce::dsp::AudioBlock<float> wet);
+    bool isIdle (const juce::AudioBuffer<float>& buffer);
 
     using Filter = juce::dsp::StateVariableTPTFilter<float>;
 
@@ -53,6 +60,7 @@ private:
     juce::AudioBuffer<float> leftBus, rightBus;
     double currentSampleRate = 48000.0;
     int capacity = 0;
+    juce::int64 silentSamples = 0;
 };
 
 } // namespace lucky

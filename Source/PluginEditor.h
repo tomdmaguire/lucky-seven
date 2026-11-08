@@ -49,6 +49,7 @@ private:
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;
+    float shownOriginalT60 = -1.0f;
     juce::Colour accent { lucky::theme::accent };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenEditor)

@@ -182,7 +182,12 @@ void LuckySevenEditor::stepProgram (int delta)
 void LuckySevenEditor::timerCallback()
 {
     browser.setDecayRatio (static_cast<float> (decay.slider.getValue() / 100.0));
-    decay.slider.repaint();
+
+    if (const auto original = audioProcessor.getOriginalT60(); ! juce::approximatelyEqual (original, shownOriginalT60))
+    {
+        shownOriginalT60 = original;
+        decay.slider.repaint();
+    }
 
     if (const auto selected = audioProcessor.getSelectedIrId(); selected != shownSelection)
     {

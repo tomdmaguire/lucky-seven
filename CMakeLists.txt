@@ -78,6 +78,7 @@ target_sources(LuckySevenTests PRIVATE
     Tests/DecayShaperTests.cpp
     Tests/IrLibraryTests.cpp
     Tests/RealLibraryTests.cpp
+    Tests/ReverbEngineTests.cpp
     ${LUCKY_SEVEN_CORE_SOURCES}
 )
 
@@ -101,3 +102,11 @@ target_link_libraries(LuckySevenTests
 
 enable_testing()
 add_test(NAME LuckySevenTests COMMAND $<TARGET_FILE:LuckySevenTests>)
+
+juce_add_console_app(LuckySevenBench PRODUCT_NAME "Lucky Seven Bench")
+target_sources(LuckySevenBench PRIVATE tools/Benchmark.cpp ${LUCKY_SEVEN_CORE_SOURCES})
+target_include_directories(LuckySevenBench PRIVATE Source)
+target_compile_definitions(LuckySevenBench PRIVATE JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+target_link_libraries(LuckySevenBench
+    PRIVATE juce::juce_audio_formats juce::juce_dsp juce::juce_data_structures
+    PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags juce::juce_recommended_warning_flags)

@@ -85,6 +85,7 @@ void IrLoader::loadFile (const juce::File& file)
         return;
 
     normaliseEnergy (buffer);
+    trimTail (buffer, rate);
     profile = analyse (buffer, rate);
     original = std::move (buffer);
     originalRate = rate;
