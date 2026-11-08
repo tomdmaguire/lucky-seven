@@ -33,7 +33,14 @@ juce_add_plugin(LuckySeven
     COPY_PLUGIN_AFTER_BUILD TRUE
 )
 
-set(LUCKY_SEVEN_CORE_SOURCES)
+set(LUCKY_SEVEN_CORE_SOURCES
+    Source/ir/IrAnalysis.cpp
+    Source/ir/IrLibrary.cpp
+    Source/ir/IrCatalogue.cpp
+    Source/dsp/DecayShaper.cpp
+    Source/dsp/ReverbEngine.cpp
+    Source/dsp/IrLoader.cpp
+)
 
 target_sources(LuckySeven PRIVATE
     Source/PluginProcessor.cpp
@@ -58,3 +65,34 @@ target_link_libraries(LuckySeven
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags
 )
+
+juce_add_console_app(LuckySevenTests PRODUCT_NAME "Lucky Seven Tests")
+
+target_sources(LuckySevenTests PRIVATE
+    Tests/TestMain.cpp
+    Tests/DecayShaperTests.cpp
+    Tests/IrLibraryTests.cpp
+    Tests/RealLibraryTests.cpp
+    ${LUCKY_SEVEN_CORE_SOURCES}
+)
+
+target_include_directories(LuckySevenTests PRIVATE Source)
+
+target_compile_definitions(LuckySevenTests PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_UNIT_TESTS=1
+)
+
+target_link_libraries(LuckySevenTests
+    PRIVATE
+        juce::juce_audio_formats
+        juce::juce_dsp
+        juce::juce_data_structures
+    PUBLIC
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+)
+
+enable_testing()
+add_test(NAME LuckySevenTests COMMAND $<TARGET_FILE:LuckySevenTests>)

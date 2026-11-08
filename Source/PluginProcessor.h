@@ -1,11 +1,21 @@
 #pragma once
 
+#include "dsp/IrLoader.h"
+#include "dsp/ReverbEngine.h"
+#include "ir/IrCatalogue.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 
 class LuckySevenProcessor final : public juce::AudioProcessor
 {
 public:
+    static inline const juce::String predelayId { "predelay" };
+    static inline const juce::String decayId { "decay" };
+    static inline const juce::String mixId { "mix" };
+    static inline const juce::Identifier irIdProperty { "irId" };
+    static inline const juce::Identifier viewProperty { "view" };
+
     LuckySevenProcessor();
+    ~LuckySevenProcessor() override;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
@@ -20,7 +30,7 @@ public:
     bool acceptsMidi() const override { return false; }
     bool producesMidi() const override { return false; }
     bool isMidiEffect() const override { return false; }
-    double getTailLengthSeconds() const override { return 0.0; }
+    double getTailLengthSeconds() const override;
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -31,6 +41,29 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+    /** Selects the program with the given catalogue id and starts loading it. */
+    void selectIr (const juce::String& id);
+
+    /** Catalogue id of the selected program. */
+    juce::String getSelectedIrId() const;
+
+    /** Untouched mid-band T60 of the loaded program in seconds. */
+    float getOriginalT60() const noexcept { return loader->getOriginalT60(); }
+
+    juce::AudioProcessorValueTreeState& getParameters() noexcept { return parameters; }
+    lucky::IrCatalogue& getCatalogue() noexcept { return *catalogue; }
+
 private:
+    static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
+    void requestSelectedFile();
+
+    juce::AudioProcessorValueTreeState parameters;
+    juce::SharedResourcePointer<lucky::IrCatalogue> catalogue;
+    lucky::ReverbEngine engine;
+    std::unique_ptr<lucky::IrLoader> loader;
+    std::atomic<float>* predelayMs = nullptr;
+    std::atomic<float>* mixPercent = nullptr;
+    double hostSampleRate = 48000.0;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenProcessor)
 };
