@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.0.1
+
+- New installer: download Lucky-Seven.pkg, open it, and choose VST3 and/or AU. No Terminal step needed.
+- One-click IR download: on first launch, click Download Bricasti IRs to fetch Samplicity's free Bricasti M7 archive and set it up automatically, with progress and cancel. Also in the ··· menu.
+- Fix: the window no longer reopens at 75% of the size you left it at.
+- Clearer install instructions, linking the exact Samplicity archive.
+
 ## v1.0.0
 
 First release.

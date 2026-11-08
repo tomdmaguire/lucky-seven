@@ -20,23 +20,15 @@ A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7
 
 ## Installing
 
-Download the latest zip from the [Releases page](https://github.com/tomdmaguire/lucky-seven/releases). It contains both formats, built for Apple Silicon and Intel Macs:
+Download [**Lucky-Seven.pkg**](https://github.com/tomdmaguire/lucky-seven/releases/latest/download/Lucky-Seven.pkg) and open it. It installs the VST3 and Audio Unit (Apple Silicon and Intel) into `/Library/Audio/Plug-Ins`.
 
-- `Lucky Seven.vst3` goes in `~/Library/Audio/Plug-Ins/VST3`
-- `Lucky Seven.component` (Audio Unit, for Logic and GarageBand) goes in `~/Library/Audio/Plug-Ins/Components`
+Lucky Seven isn't signed with a paid Apple developer certificate, so macOS won't open the installer the first time. Click **Done**, then go to **System Settings → Privacy & Security**, scroll down and click **Open Anyway**.
 
-Lucky Seven isn't signed with an Apple developer certificate, so macOS blocks it the first time. Unblock it once in Terminal:
-
-```sh
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Lucky Seven.vst3"
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.component"
-```
-
-Or, if your DAW reports it as blocked, open **System Settings → Privacy & Security** and click **Allow Anyway**. Then rescan plugins in your DAW.
+A zip for installing by hand is also on the [releases page](https://github.com/tomdmaguire/lucky-seven/releases/latest); its `INSTALL.txt` explains the steps.
 
 ## Getting the impulse responses
 
-Lucky Seven does not ship with any impulse responses. Download Samplicity's free Bricasti M7 archive, [`Samplicity - Bricasti IRs version 2023-10.zip`](https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip) (964 MB). If that link stops working, it's the **Bricasti M7 impulse response archive** at the very bottom of [Samplicity's downloads page](https://www.samplicity.com/downloads/). Unzip it and move the whole folder into:
+Lucky Seven does not ship with any impulse responses. The first time you open it, click **Download Bricasti IRs**: it fetches Samplicity's free archive and sets everything up. To do it by hand instead, download Samplicity's free Bricasti M7 archive, [`Samplicity - Bricasti IRs version 2023-10.zip`](https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip) (964 MB). If that link stops working, it's the **Bricasti M7 impulse response archive** at the very bottom of [Samplicity's downloads page](https://www.samplicity.com/downloads/). Unzip it and move the whole folder into:
 
 ```
 ~/Music/Lucky Seven/IRs
