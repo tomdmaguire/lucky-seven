@@ -2,6 +2,7 @@
 
 #include "PluginProcessor.h"
 #include "ui/BrowserPanel.h"
+#include "ui/HeartButton.h"
 #include "ui/LookAndFeel.h"
 #include "ui/Theme.h"
 
@@ -44,6 +45,7 @@ private:
     juce::TextButton mapTab { "MAP" }, listTab { "LIST" };
     juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
     juce::TextButton programButton;
+    lucky::HeartButton favouriteButton;
     juce::DrawableButton folderButton { "IR folder", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, lowCut, highCut, mix;
     std::array<juce::TextButton, 3> modeButtons;

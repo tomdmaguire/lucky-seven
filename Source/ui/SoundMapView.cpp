@@ -183,7 +183,8 @@ int SoundMapView::dotAt (juce::Point<float> point) const
 
 bool SoundMapView::isShown (const Dot& dot) const
 {
-    return categoryFilter.empty() || categoryFilter.count (dot.item->entry.categoryIndex) > 0;
+    return categoryFilter.empty() || categoryFilter.count (dot.item->entry.categoryIndex) > 0
+        || (dot.item->favourite && categoryFilter.count (theme::favouritesCategory) > 0);
 }
 
 int SoundMapView::selectedDot() const
@@ -298,9 +299,9 @@ void SoundMapView::paintAxes (juce::Graphics& g, juce::Rectangle<float> area) co
 
 std::vector<SoundMapView::LegendEntry> SoundMapView::legendEntries() const
 {
-    std::vector<LegendEntry> entries;
+    std::vector<LegendEntry> entries { { theme::favouritesCategory, "FAVOURITES", {} } };
     for (const auto& item : items)
-        if (entries.empty() || entries.back().categoryIndex != item.entry.categoryIndex)
+        if (entries.back().categoryIndex != item.entry.categoryIndex)
             entries.push_back ({ item.entry.categoryIndex, item.entry.category.toUpperCase(), {} });
 
     const juce::Font font (theme::labelFont (10.0f));
@@ -334,7 +335,10 @@ void SoundMapView::paintLegend (juce::Graphics& g) const
         const auto dotCentre = juce::Point<float> { entry.bounds.getX() + 3.0f, entry.bounds.getCentreY() };
 
         g.setColour (active ? colour : colour.withAlpha (0.3f));
-        g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre (dotCentre));
+        if (entry.categoryIndex == theme::favouritesCategory)
+            g.fillPath (theme::heartPath (juce::Rectangle<float> (9.0f, 9.0f).withCentre (dotCentre)));
+        else
+            g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre (dotCentre));
         if (selected)
             g.drawEllipse (juce::Rectangle<float> (11.0f, 11.0f).withCentre (dotCentre), 1.0f);
 

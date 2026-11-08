@@ -37,7 +37,10 @@ public:
         paintRowBackground (g, width, height, selected, theme::categoryColour (index));
 
         g.setColour (theme::categoryColour (index));
-        g.fillEllipse (16.0f, static_cast<float> (height) * 0.5f - 3.0f, 6.0f, 6.0f);
+        if (index == theme::favouritesCategory)
+            g.fillPath (theme::heartPath ({ 14.0f, static_cast<float> (height) * 0.5f - 5.0f, 10.0f, 10.0f }));
+        else
+            g.fillEllipse (16.0f, static_cast<float> (height) * 0.5f - 3.0f, 6.0f, 6.0f);
 
         g.setFont (theme::labelFont (12.0f));
         g.setColour (selected ? theme::text : theme::textDim);
@@ -72,7 +75,13 @@ public:
 
         g.setFont (juce::FontOptions (14.0f));
         g.setColour (selected ? theme::text : theme::text.withAlpha (0.85f));
-        g.drawText (item.entry.name, 16, 0, width - 92, height, juce::Justification::centredLeft);
+        g.drawText (item.entry.name, 16, 0, width - 110, height, juce::Justification::centredLeft);
+
+        if (item.favourite)
+        {
+            g.setColour (theme::categoryColour (item.entry.categoryIndex));
+            g.fillPath (theme::heartPath ({ static_cast<float> (width) - 92.0f, static_cast<float> (height) * 0.5f - 5.0f, 10.0f, 10.0f }));
+        }
 
         if (item.profile)
         {
@@ -145,6 +154,7 @@ void ListBrowserView::setItems (std::vector<BrowserItem> newItems)
     std::sort (items.begin(), items.end(), alphabeticalOrder);
 
     categories.clear();
+    categories.emplace_back (theme::favouritesCategory, "Favourites");
     for (const auto& item : items)
         if (categories.empty() || categories.back().first != item.entry.categoryIndex)
             categories.emplace_back (item.entry.categoryIndex, item.entry.category);
@@ -158,10 +168,20 @@ void ListBrowserView::setSelectedId (const juce::String& id)
     selectedId = id;
     const juce::ScopedValueSetter<bool> guard (updating, true);
 
-    const auto selected = std::find_if (items.begin(), items.end(), [&] (const auto& item) { return item.entry.id() == id; });
-    const auto categoryIndex = selected != items.end() ? selected->entry.categoryIndex : (categories.empty() ? 0 : categories.front().first);
-    const auto categoryRow = static_cast<int> (std::distance (categories.begin(),
-        std::find_if (categories.begin(), categories.end(), [&] (const auto& c) { return c.first == categoryIndex; })));
+    const auto inRow = [&] (int row)
+    {
+        const auto programs = programsInCategory (row);
+        return std::any_of (programs.begin(), programs.end(), [&] (const auto* item) { return item->entry.id() == id; });
+    };
+
+    auto categoryRow = categoryList.getSelectedRow();
+    if (categoryRow < 0 || ! inRow (categoryRow))
+    {
+        const auto selected = std::find_if (items.begin(), items.end(), [&] (const auto& item) { return item.entry.id() == id; });
+        const auto categoryIndex = selected != items.end() ? selected->entry.categoryIndex : 1;
+        categoryRow = static_cast<int> (std::distance (categories.begin(),
+            std::find_if (categories.begin(), categories.end(), [&] (const auto& c) { return c.first == categoryIndex; })));
+    }
 
     categoryList.selectRow (categoryRow);
     programModel->programs = programsInCategory (categoryRow);
@@ -196,7 +216,7 @@ std::vector<const BrowserItem*> ListBrowserView::programsInCategory (int categor
 
     const auto categoryIndex = categories[static_cast<size_t> (categoryRow)].first;
     for (const auto& item : items)
-        if (item.entry.categoryIndex == categoryIndex)
+        if (categoryIndex == theme::favouritesCategory ? item.favourite : item.entry.categoryIndex == categoryIndex)
             result.push_back (&item);
 
     return result;

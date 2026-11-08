@@ -3,6 +3,7 @@
 #include "IrAnalysis.h"
 #include "IrLibrary.h"
 #include <juce_data_structures/juce_data_structures.h>
+#include <set>
 
 namespace lucky
 {
@@ -33,6 +34,12 @@ public:
     /** Program with the given id, if present. */
     std::optional<IrEntry> findEntry (const juce::String& id) const;
 
+    /** True if the program is in the user's favourites, shared by every instance. */
+    bool isFavourite (const juce::String& id) const;
+
+    /** Adds or removes a program from favourites and notifies listeners. */
+    void toggleFavourite (const juce::String& id);
+
     /** Default folder used before the user picks one. */
     static juce::File defaultRoot();
 
@@ -48,6 +55,7 @@ private:
     std::vector<IrEntry> entries;
     std::map<juce::String, DecayProfile> profiles;
     std::map<juce::String, DecayProfile> cache;
+    std::set<juce::String> favourites;
 };
 
 } // namespace lucky

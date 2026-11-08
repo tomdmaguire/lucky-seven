@@ -72,6 +72,9 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     };
     addAndMakeVisible (programButton);
 
+    favouriteButton.onClick = [this] { audioProcessor.getCatalogue().toggleFavourite (shownSelection); };
+    addAndMakeVisible (favouriteButton);
+
     const auto idleIcon = makeFolderIcon (lucky::theme::textDim);
     const auto hoverIcon = makeFolderIcon (lucky::theme::text);
     folderButton.setImages (idleIcon.get(), hoverIcon.get());
@@ -227,7 +230,8 @@ void LuckySevenEditor::refreshItems()
     for (auto& entry : catalogue.getEntries())
     {
         const auto profile = catalogue.getProfile (entry.id());
-        items.push_back ({ std::move (entry), profile });
+        const auto favourite = catalogue.isFavourite (entry.id());
+        items.push_back ({ std::move (entry), profile, favourite });
     }
 
     browser.setItems (items);
@@ -248,6 +252,8 @@ const lucky::BrowserItem* LuckySevenEditor::selectedItem() const
 void LuckySevenEditor::applyAccent()
 {
     const auto* item = selectedItem();
+    favouriteButton.setToggleState (item != nullptr && item->favourite, juce::dontSendNotification);
+    favouriteButton.setTooltip (item != nullptr && item->favourite ? "Remove from favourites" : "Add to favourites");
     accent = item != nullptr ? lucky::theme::categoryColour (item->entry.categoryIndex) : lucky::theme::accent;
 
     for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &lowCut.slider, &highCut.slider,
@@ -262,6 +268,9 @@ void LuckySevenEditor::applyAccent()
         button.setColour (juce::Slider::rotarySliderFillColourId, accent);
         button.repaint();
     }
+
+    favouriteButton.setColour (juce::Slider::rotarySliderFillColourId, accent);
+    favouriteButton.repaint();
 }
 
 void LuckySevenEditor::stepProgram (int delta)
@@ -342,7 +351,7 @@ void LuckySevenEditor::paint (juce::Graphics& g)
 
     if (const auto* item = selectedItem())
     {
-        const auto textArea = pill.withTrimmedLeft (32.0f).withTrimmedRight (32.0f);
+        const auto textArea = pill.withTrimmedLeft (32.0f).withTrimmedRight (62.0f);
         g.setColour (accent);
         g.fillEllipse (juce::Rectangle<float> (6.0f, 6.0f).withCentre ({ textArea.getX() + 4.0f, textArea.getCentreY() }));
         g.setColour (theme::textDim);
@@ -377,6 +386,7 @@ void LuckySevenEditor::resized()
     pill.setX (topBar.getX() + 16);
     previousButton.setBounds (pill.removeFromLeft (30));
     nextButton.setBounds (pill.removeFromRight (30));
+    favouriteButton.setBounds (pill.removeFromRight (28));
     programButton.setBounds (pill);
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);

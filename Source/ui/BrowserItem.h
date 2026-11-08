@@ -12,6 +12,7 @@ struct BrowserItem
 {
     IrEntry entry;
     std::optional<DecayProfile> profile;
+    bool favourite = false;
 };
 
 /** Browse order shared by the list view and the prev/next buttons: category A-Z, then program A-Z. */

@@ -6,6 +6,7 @@ namespace lucky
 namespace
 {
 const juce::Identifier rootKey { "irRoot" };
+const juce::String favouritesKey { "favourites" };
 
 juce::File cacheFile()
 {
@@ -55,6 +56,10 @@ IrCatalogue::IrCatalogue() : juce::Thread ("Lucky Seven IR analysis")
     options.osxLibrarySubFolder = "Application Support";
     settings.setStorageParameters (options);
 
+    for (const auto& id : juce::StringArray::fromLines (settings.getUserSettings()->getValue (favouritesKey)))
+        if (id.isNotEmpty())
+            favourites.insert (id);
+
     loadCache();
     rescan();
 }
@@ -84,6 +89,29 @@ void IrCatalogue::setRoot (const juce::File& newRoot)
         settings.saveIfNeeded();
     }
     rescan();
+}
+
+bool IrCatalogue::isFavourite (const juce::String& id) const
+{
+    const juce::ScopedLock scope (lock);
+    return favourites.count (id) > 0;
+}
+
+void IrCatalogue::toggleFavourite (const juce::String& id)
+{
+    {
+        const juce::ScopedLock scope (lock);
+        if (! favourites.erase (id))
+            favourites.insert (id);
+
+        juce::StringArray lines;
+        for (const auto& favourite : favourites)
+            lines.add (favourite);
+
+        settings.getUserSettings()->setValue (favouritesKey, lines.joinIntoString ("\n"));
+        settings.saveIfNeeded();
+    }
+    sendChangeMessage();
 }
 
 std::vector<IrEntry> IrCatalogue::getEntries() const
