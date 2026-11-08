@@ -98,14 +98,27 @@ int checkKeys()
     return 0;
 }
 
-/** Renders the editor to a PNG. Modes: "list", "active" (plays test hits first), "timing", or a scale such as "150%". */
+/** Renders the editor to a PNG. Modes: "list", "search:<text>", "active" (plays test hits first), "timing", or a scale such as "150%".
+    Set LUCKY_SEVEN_SNAPSHOT_IR to a program id to choose the program shown. */
 int snapshot (const juce::String& path, const juce::String& mode)
 {
     std::unique_ptr<juce::AudioProcessor> processor (createPluginFilter());
     processor->prepareToPlay (48000.0, 512);
 
+    if (const auto program = juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_SNAPSHOT_IR", {}); program.isNotEmpty())
+        dynamic_cast<LuckySevenProcessor&> (*processor).selectIr (program);
+
     std::unique_ptr<juce::AudioProcessorEditor> editor (processor->createEditorAndMakeActive());
     pumpMessages (1.5);
+
+    if (mode.startsWith ("search:"))
+    {
+        if (auto* listTab = dynamic_cast<juce::Button*> (findById (*editor, "listTab")))
+            listTab->triggerClick();
+        pumpMessages (0.2);
+        if (auto* search = dynamic_cast<juce::TextEditor*> (findById (*editor, "search")))
+            search->setText (mode.fromFirstOccurrenceOf (":", false, false), true);
+    }
 
     if (mode == "active")
     {
@@ -141,7 +154,8 @@ int snapshot (const juce::String& path, const juce::String& mode)
             listTab->triggerClick();
 
     pumpMessages (0.3);
-    const auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, 2.0f);
+    const auto pixelScale = mode.endsWithChar ('%') ? 2.0f : 1800.0f / static_cast<float> (editor->getWidth());
+    const auto image = editor->createComponentSnapshot (editor->getLocalBounds(), true, pixelScale);
     const auto output = juce::File::getCurrentWorkingDirectory().getChildFile (path);
     output.deleteFile();
     juce::FileOutputStream stream (output);

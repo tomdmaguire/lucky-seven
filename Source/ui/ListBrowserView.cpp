@@ -218,6 +218,7 @@ ListBrowserView::ListBrowserView (SelectionCallback callback, SelectionCallback 
     categoryList.setModel (categoryModel.get());
     programList.setModel (programModel.get());
 
+    searchBox.setComponentID ("search");
     searchBox.setTextToShowWhenEmpty ("Search", theme::textDim);
     searchBox.setFont (juce::FontOptions (14.0f));
     searchBox.setIndents (30, 7);

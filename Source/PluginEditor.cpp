@@ -512,6 +512,8 @@ void LuckySevenView::resized()
 LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p), view (p)
 {
+    const auto savedScale = juce::jlimit (minScale, maxScale, audioProcessor.getCatalogue().getUiScale());
+
     view.getScale = [this] { return currentScale(); };
     view.onScaleRequested = [this] (float scale)
     {
@@ -524,8 +526,8 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
                      juce::roundToInt (LuckySevenView::baseWidth * maxScale), juce::roundToInt (LuckySevenView::baseHeight * maxScale));
     getConstrainer()->setFixedAspectRatio (static_cast<double> (LuckySevenView::baseWidth) / LuckySevenView::baseHeight);
 
-    const auto scale = juce::jlimit (minScale, maxScale, audioProcessor.getCatalogue().getUiScale());
-    setSize (juce::roundToInt (LuckySevenView::baseWidth * scale), juce::roundToInt (LuckySevenView::baseHeight * scale));
+    setSize (juce::roundToInt (LuckySevenView::baseWidth * savedScale), juce::roundToInt (LuckySevenView::baseHeight * savedScale));
+    sizeRestored = true;
 }
 
 float LuckySevenEditor::currentScale() const
@@ -538,5 +540,7 @@ void LuckySevenEditor::resized()
     const auto scale = currentScale();
     view.setBounds (0, 0, LuckySevenView::baseWidth, LuckySevenView::baseHeight);
     view.setTransform (juce::AffineTransform::scale (scale));
-    audioProcessor.getCatalogue().setUiScale (scale);
+
+    if (sizeRestored)
+        audioProcessor.getCatalogue().setUiScale (scale);
 }
