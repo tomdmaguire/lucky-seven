@@ -396,7 +396,7 @@ void LuckySevenView::showMenu()
 
 void LuckySevenView::chooseFolder()
 {
-    chooser = std::make_unique<juce::FileChooser> ("Choose the Bricasti IR folder", audioProcessor.getCatalogue().getRoot());
+    chooser = std::make_unique<juce::FileChooser> ("Choose an IR folder", audioProcessor.getCatalogue().getRoot(), juce::String(), true, true);
     chooser->launchAsync (juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories,
                           [this] (const juce::FileChooser& fileChooser)
                           {
