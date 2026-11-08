@@ -97,6 +97,10 @@
   .command button { position: absolute; top: 9px; right: 9px; background: var(--bar); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 5px 11px; font-family: var(--display); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; cursor: pointer; }
   .command button:hover { border-color: var(--dim); }
 
+  .manual { margin-top: 36px; max-width: 780px; color: var(--dim); border: 1px solid var(--line); border-radius: 8px; padding: 14px 18px; }
+  .manual summary { cursor: pointer; color: var(--text); font-family: var(--display); font-weight: 600; letter-spacing: 0.03em; font-size: 17px; }
+  .manual[open] summary { margin-bottom: 8px; }
+  .manual p { margin: 8px 0; }
   .notes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; color: var(--dim); }
   .notes h3 { font-family: var(--display); font-weight: 600; font-size: 19px; letter-spacing: 0.03em; color: var(--text); margin: 0 0 4px; }
   .notes p { margin: 0; }
@@ -138,7 +142,7 @@
         <p>I love the sound of the Bricasti M7, but I never found a plugin that had that sound <strong>and</strong> worked the way I wanted to work. So I made one.</p>
         <p>Lucky Seven plays the Bricasti M7's real impulse responses in true stereo, adds the <strong>decay control</strong> I kept wishing for, and lays all 134 programs out on a <strong>map</strong> so you can find the right room by ear instead of by name.</p>
         <div class="actions">
-          <a class="button primary" href="https://github.com/tomdmaguire/lucky-seven/releases/latest">Download for Mac</a>
+          <a class="button primary" href="https://github.com/tomdmaguire/lucky-seven/releases/latest/download/Lucky-Seven.pkg">Download for Mac</a>
           <a class="button secondary" href="#install">How to install</a>
         </div>
         <p class="specs">Free and open source &middot; Apple Silicon &amp; Intel &middot; macOS 13 or newer</p>
@@ -216,46 +220,44 @@
   <section id="install">
     <div class="wrap">
       <span class="label">Install</span>
-      <h2>Up and running in five minutes.</h2>
+      <h2>Up and running in a couple of minutes.</h2>
       <ol class="steps">
         <li>
           <div>
-            <h3>Download the plugin</h3>
-            <p>Grab the latest zip from the <a href="https://github.com/tomdmaguire/lucky-seven/releases/latest">releases page</a> and unzip it. It contains <code>Lucky Seven.vst3</code> and <code>Lucky Seven.component</code> (the AU, for Logic and GarageBand).</p>
-          </div>
-        </li>
-        <li>
-          <div>
-            <h3>Copy it into your plug-in folders</h3>
-            <p>Put <code>Lucky Seven.vst3</code> in <code>~/Library/Audio/Plug-Ins/VST3</code> and <code>Lucky Seven.component</code> in <code>~/Library/Audio/Plug-Ins/Components</code>. In Finder, press <code>Cmd</code> + <code>Shift</code> + <code>G</code> and paste a path to jump there.</p>
+            <h3>Download the installer</h3>
+            <p><a href="https://github.com/tomdmaguire/lucky-seven/releases/latest/download/Lucky-Seven.pkg">Download Lucky-Seven.pkg</a> and double-click it.</p>
           </div>
         </li>
         <li>
           <div>
             <h3>Let macOS open it</h3>
-            <p>Lucky Seven isn't signed with a paid Apple developer certificate, so macOS blocks it the first time. Open Terminal and run:</p>
-            <div class="command">
-              <pre id="unblock">xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Lucky Seven.vst3"
-xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.component"</pre>
-              <button type="button" data-copy="unblock">Copy</button>
-            </div>
-            <p>Or, if your DAW says the plugin is blocked, open System Settings &rarr; Privacy &amp; Security and click Allow Anyway.</p>
+            <p>Lucky Seven is free, so it isn't signed with a paid Apple developer certificate, and macOS says it can't check it the first time. Click <strong>Done</strong>, open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down and click <strong>Open Anyway</strong> next to Lucky-Seven.pkg. You only need to do this once.</p>
           </div>
         </li>
         <li>
           <div>
-            <h3>Get the impulse responses</h3>
-            <p>Download Samplicity's free Bricasti M7 archive, <a href="https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip"><code>Samplicity - Bricasti IRs version 2023-10.zip</code></a> (964&nbsp;MB). If that link ever stops working, it's the <strong>Bricasti M7 impulse response archive</strong> at the very bottom of <a href="https://www.samplicity.com/downloads/">Samplicity's downloads page</a>.</p>
-            <p>Unzip it and move the whole folder into <code>~/Music/Lucky Seven/IRs</code>. Lucky Seven creates that folder the first time it opens and finds everything inside it, so there's no need to sort through the files.</p>
+            <h3>Run the installer</h3>
+            <p>Click through and choose the formats you want: VST3, Audio Unit, or both. They're installed for every user on your Mac.</p>
           </div>
         </li>
         <li>
           <div>
-            <h3>Rescan in your DAW</h3>
-            <p>Rescan plug-ins in your DAW's settings, or simply restart it. Lucky Seven appears alongside your other effects.</p>
+            <h3>Download the impulse responses</h3>
+            <p>Open Lucky Seven in your DAW (rescan plug-ins first if it doesn't appear) and click <strong>Download Bricasti IRs</strong>. Lucky Seven fetches Samplicity's free Bricasti M7 archive (964&nbsp;MB) and sets everything up, which takes about a minute on a fast connection.</p>
           </div>
         </li>
       </ol>
+
+      <details class="manual">
+        <summary>Prefer to install by hand?</summary>
+        <p>Download the zip from the <a href="https://github.com/tomdmaguire/lucky-seven/releases/latest">releases page</a> and copy <code>Lucky Seven.vst3</code> into <code>~/Library/Audio/Plug-Ins/VST3</code> and <code>Lucky Seven.component</code> into <code>~/Library/Audio/Plug-Ins/Components</code>. Those folders may be empty; that's normal. Then unblock the plug-ins in Terminal:</p>
+        <div class="command">
+          <pre id="unblock">xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/"Lucky Seven.vst3"
+xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.component"</pre>
+          <button type="button" data-copy="unblock">Copy</button>
+        </div>
+        <p>For the impulse responses, either click Download Bricasti IRs in the plugin, or download <a href="https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip"><code>Samplicity - Bricasti IRs version 2023-10.zip</code></a> yourself and move the unzipped folder into <code>~/Music/Lucky Seven/IRs</code>.</p>
+      </details>
     </div>
   </section>
 
@@ -270,7 +272,7 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.
         </div>
         <div>
           <h3>Formats</h3>
-          <p>VST3 and Audio Unit, built for Apple Silicon and Intel Macs running macOS 13 or newer. After adding IRs, choose Rescan IR folder from the &middot;&middot;&middot; menu.</p>
+          <p>VST3 and Audio Unit, built for Apple Silicon and Intel Macs running macOS 13 or newer. After adding your own IRs, choose Rescan IR folder from the &middot;&middot;&middot; menu.</p>
         </div>
         <div>
           <h3>Open source</h3>
