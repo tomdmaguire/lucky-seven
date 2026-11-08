@@ -1,6 +1,5 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
-#include "ui/EqView.h"
 
 namespace
 {
@@ -15,10 +14,8 @@ LuckySevenProcessor::LuckySevenProcessor()
 {
     predelayMs = parameters.getRawParameterValue (predelayId);
     mixPercent = parameters.getRawParameterValue (mixId);
-    eqFrequency = parameters.getRawParameterValue (eqFrequencyId);
-    eqWidth = parameters.getRawParameterValue (eqWidthId);
-    lowCutOn = parameters.getRawParameterValue (lowCutOnId);
-    highCutOn = parameters.getRawParameterValue (highCutOnId);
+    lowCutHz = parameters.getRawParameterValue (lowCutId);
+    highCutHz = parameters.getRawParameterValue (highCutId);
     loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId));
     selectIr (defaultIrId);
 }
@@ -34,10 +31,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
     const auto msLabel = juce::AudioParameterFloatAttributes().withLabel ("ms");
     const auto percentLabel = juce::AudioParameterFloatAttributes().withLabel ("%");
     const auto hertzLabel = juce::AudioParameterFloatAttributes().withLabel ("Hz");
-    const auto frequencyRange = Range (lucky::ReverbEngine::minCutHz, lucky::ReverbEngine::maxCutHz,
-        [] (float start, float end, float proportion) { return start * std::pow (end / start, proportion); },
-        [] (float start, float end, float value) { return std::log (value / start) / std::log (end / start); },
-        [] (float, float, float value) { return value; });
+    const auto logRange = [] (float start, float end)
+    {
+        return Range (start, end,
+            [] (float from, float to, float proportion) { return from * std::pow (to / from, proportion); },
+            [] (float from, float to, float value) { return std::log (value / from) / std::log (to / from); },
+            [] (float, float, float value) { return value; });
+    };
 
     return {
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { predelayId, 1 }, "Pre-delay",
@@ -46,13 +46,12 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
                                                      Range (10.0f, 100.0f, 0.1f), 100.0f, percentLabel),
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { mixId, 1 }, "Mix",
                                                      Range (0.0f, 100.0f, 0.1f), 30.0f, percentLabel),
-        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { eqFrequencyId, 1 }, "EQ Frequency",
-                                                     frequencyRange, 1000.0f, hertzLabel),
-        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { eqWidthId, 1 }, "EQ Width",
-                                                     Range (0.5f, 10.0f, 0.01f), 6.0f,
-                                                     juce::AudioParameterFloatAttributes().withLabel ("oct")),
-        std::make_unique<juce::AudioParameterBool> (juce::ParameterID { lowCutOnId, 1 }, "Lo Cut", false),
-        std::make_unique<juce::AudioParameterBool> (juce::ParameterID { highCutOnId, 1 }, "Hi Cut", false),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { lowCutId, 2 }, "Low Cut",
+                                                     logRange (lucky::ReverbEngine::minCutHz, lowCutMaxHz),
+                                                     lucky::ReverbEngine::minCutHz, hertzLabel),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { highCutId, 2 }, "High Cut",
+                                                     logRange (highCutMinHz, lucky::ReverbEngine::maxCutHz),
+                                                     lucky::ReverbEngine::maxCutHz, hertzLabel),
     };
 }
 
@@ -85,9 +84,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
 
     engine.setPredelayMs (predelayMs->load());
     engine.setMix (mixPercent->load() / 100.0f);
-    const auto [lowCorner, highCorner] = lucky::EqView::cornersFor (eqFrequency->load(), eqWidth->load());
-    engine.setWetFilter (lowCutOn->load() >= 0.5f ? lowCorner : lucky::ReverbEngine::minCutHz,
-                         highCutOn->load() >= 0.5f ? highCorner : lucky::ReverbEngine::maxCutHz);
+    engine.setWetFilter (lowCutHz->load(), highCutHz->load());
     engine.process (buffer);
 }
 

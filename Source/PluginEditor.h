@@ -2,7 +2,6 @@
 
 #include "PluginProcessor.h"
 #include "ui/BrowserPanel.h"
-#include "ui/EqView.h"
 #include "ui/LookAndFeel.h"
 #include "ui/Theme.h"
 
@@ -21,7 +20,7 @@ private:
     struct Knob
     {
         juce::Slider slider { juce::Slider::RotaryHorizontalVerticalDrag, juce::Slider::NoTextBox };
-        juce::Label label;
+        juce::Label label, minLabel, maxLabel;
         std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attachment;
     };
 
@@ -34,6 +33,7 @@ private:
     void applyAccent();
     void setupLabel (juce::Label& label, const juce::String& text);
     void setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name);
+    void setupRangeLabels (Knob& knob, const juce::String& minText, const juce::String& maxText);
     const lucky::BrowserItem* selectedItem() const;
 
     LuckySevenProcessor& audioProcessor;
@@ -43,9 +43,7 @@ private:
     juce::TextButton mapTab { "MAP" }, listTab { "LIST" };
     juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
     juce::DrawableButton folderButton { "IR folder", juce::DrawableButton::ImageFitted };
-    Knob predelay, decay, mix;
-    lucky::EqView eq;
-    juce::Label eqLabel;
+    Knob predelay, decay, lowCut, highCut, mix;
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;

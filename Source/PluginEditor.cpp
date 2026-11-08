@@ -5,13 +5,17 @@ namespace
 constexpr int editorWidth = 900;
 constexpr int editorHeight = 600;
 constexpr int topBarHeight = 48;
-constexpr int stripHeight = 164;
+constexpr int stripHeight = 156;
 constexpr int logoWidth = 196;
 constexpr int tabWidth = 96;
 constexpr int pillWidth = 340;
 constexpr int iconWidth = 52;
-constexpr int eqWidth = 300;
-constexpr int knobSize = 88;
+constexpr int knobSize = 84;
+
+juce::String formatHz (double hertz)
+{
+    return hertz >= 1000.0 ? juce::String (hertz / 1000.0, hertz >= 10000.0 ? 1 : 2) + " kHz" : juce::String (juce::roundToInt (hertz)) + " Hz";
+}
 
 std::unique_ptr<juce::Drawable> makeFolderIcon (juce::Colour colour)
 {
@@ -36,11 +40,7 @@ std::unique_ptr<juce::Drawable> makeFolderIcon (juce::Colour colour)
 LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     : AudioProcessorEditor (&p),
       audioProcessor (p),
-      browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); }),
-      eq ({ *p.getParameters().getParameter (LuckySevenProcessor::eqFrequencyId),
-            *p.getParameters().getParameter (LuckySevenProcessor::eqWidthId),
-            *p.getParameters().getParameter (LuckySevenProcessor::lowCutOnId),
-            *p.getParameters().getParameter (LuckySevenProcessor::highCutOnId) })
+      browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); })
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (browser);
@@ -58,6 +58,8 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
 
     previousButton.onClick = [this] { stepProgram (-1); };
     nextButton.onClick = [this] { stepProgram (1); };
+    previousButton.getProperties().set ("round", true);
+    nextButton.getProperties().set ("round", true);
     previousButton.setTooltip ("Previous program");
     nextButton.setTooltip ("Next program");
     addAndMakeVisible (previousButton);
@@ -73,9 +75,16 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
 
     setupKnob (predelay, LuckySevenProcessor::predelayId, "PRE-DELAY");
     setupKnob (decay, LuckySevenProcessor::decayId, "DECAY");
+    setupKnob (lowCut, LuckySevenProcessor::lowCutId, "LOW CUT");
+    setupKnob (highCut, LuckySevenProcessor::highCutId, "HIGH CUT");
     setupKnob (mix, LuckySevenProcessor::mixId, "MIX");
-    setupLabel (eqLabel, "REVERB EQ");
-    addAndMakeVisible (eq);
+    setupRangeLabels (lowCut, "20 Hz", "1 kHz");
+    setupRangeLabels (highCut, "1 kHz", "20 kHz");
+
+    lowCut.slider.textFromValueFunction = [] (double hertz) { return hertz <= lucky::ReverbEngine::minCutHz + 0.5 ? juce::String ("OFF") : formatHz (hertz); };
+    highCut.slider.textFromValueFunction = [] (double hertz) { return hertz >= lucky::ReverbEngine::maxCutHz - 1.0 ? juce::String ("OFF") : formatHz (hertz); };
+    lowCut.slider.setTooltip ("Low cut on the reverb only, 12 dB/oct");
+    highCut.slider.setTooltip ("High cut on the reverb only, 12 dB/oct");
 
     predelay.slider.textFromValueFunction = [] (double ms) { return juce::String (juce::roundToInt (ms)) + " ms"; };
     mix.slider.textFromValueFunction = [] (double percent) { return juce::String (juce::roundToInt (percent)) + "%"; };
@@ -115,6 +124,22 @@ void LuckySevenEditor::setupKnob (Knob& knob, const juce::String& parameterId, c
         audioProcessor.getParameters(), parameterId, knob.slider);
     setupLabel (knob.label, name);
     addAndMakeVisible (knob.slider);
+}
+
+void LuckySevenEditor::setupRangeLabels (Knob& knob, const juce::String& minText, const juce::String& maxText)
+{
+    const auto style = [this] (juce::Label& label, const juce::String& text, juce::Justification justification)
+    {
+        label.setText (text, juce::dontSendNotification);
+        label.setJustificationType (justification);
+        label.setFont (lucky::theme::labelFont (10.0f));
+        label.setColour (juce::Label::textColourId, lucky::theme::textDim.withAlpha (0.8f));
+        label.setInterceptsMouseClicks (false, false);
+        addAndMakeVisible (label);
+    };
+
+    style (knob.minLabel, minText, juce::Justification::centredRight);
+    style (knob.maxLabel, maxText, juce::Justification::centredLeft);
 }
 
 void LuckySevenEditor::setView (lucky::BrowserPanel::View view)
@@ -161,13 +186,12 @@ void LuckySevenEditor::applyAccent()
     const auto* item = selectedItem();
     accent = item != nullptr ? lucky::theme::categoryColour (item->entry.categoryIndex) : lucky::theme::accent;
 
-    for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &mix.slider, &mapTab, &listTab })
+    for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &lowCut.slider, &highCut.slider,
+                                                                     &mix.slider, &mapTab, &listTab })
     {
         component->setColour (juce::Slider::rotarySliderFillColourId, accent);
         component->repaint();
     }
-
-    eq.setAccent (accent);
 }
 
 void LuckySevenEditor::stepProgram (int delta)
@@ -285,20 +309,18 @@ void LuckySevenEditor::resized()
     nextButton.setBounds (pill.removeFromRight (30));
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
-    const auto knobSlot = (strip.getWidth() - eqWidth) / 3;
-    const auto placeKnob = [&] (Knob& knob)
+    const auto knobSlot = strip.getWidth() / 5;
+    for (auto* knob : { &predelay, &decay, &lowCut, &highCut, &mix })
     {
         auto slot = strip.removeFromLeft (knobSlot);
-        knob.label.setBounds (slot.removeFromTop (18));
-        knob.slider.setBounds (slot.withSizeKeepingCentre (knobSize, knobSize));
-    };
+        knob->label.setBounds (slot.removeFromTop (18));
+        const auto knobBounds = slot.withSizeKeepingCentre (knobSize, knobSize);
+        knob->slider.setBounds (knobBounds);
 
-    placeKnob (predelay);
-    placeKnob (decay);
-    auto eqSlot = strip.removeFromLeft (eqWidth);
-    eqLabel.setBounds (eqSlot.removeFromTop (18));
-    eq.setBounds (eqSlot.reduced (0, 6));
-    placeKnob (mix);
+        const auto rangeRow = juce::Rectangle<int> (knobBounds.getX() - 44, knobBounds.getBottom() - 12, knobBounds.getWidth() + 88, 14);
+        knob->minLabel.setBounds (rangeRow.withWidth (50));
+        knob->maxLabel.setBounds (rangeRow.withTrimmedLeft (rangeRow.getWidth() - 50));
+    }
 
     browser.setBounds (bounds);
 }
