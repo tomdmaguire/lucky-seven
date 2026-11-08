@@ -1,4 +1,5 @@
 #include "PluginProcessor.h"
+#include "ui/SoundMapView.h"
 #include <CoreFoundation/CoreFoundation.h>
 #include <iostream>
 
@@ -119,6 +120,18 @@ int snapshot (const juce::String& path, const juce::String& mode)
         pumpMessages (0.2);
         if (auto* search = dynamic_cast<juce::TextEditor*> (findById (*editor, "search")))
             search->setText (mode.fromFirstOccurrenceOf (":", false, false), true);
+    }
+
+    if (mode.startsWith ("hover:"))
+    {
+        auto* map = dynamic_cast<lucky::SoundMapView*> (findById (*editor, "soundMap"));
+        if (const auto position = map != nullptr ? map->positionOf (mode.fromFirstOccurrenceOf (":", false, false)) : std::nullopt)
+        {
+            auto source = juce::Desktop::getInstance().getMainMouseSource();
+            const juce::MouseEvent event (source, *position, {}, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, map, map,
+                                          juce::Time::getCurrentTime(), *position, juce::Time::getCurrentTime(), 0, false);
+            map->mouseMove (event);
+        }
     }
 
     if (mode == "active")

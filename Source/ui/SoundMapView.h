@@ -10,7 +10,6 @@ namespace lucky
 /** Scatter of every program by decay time (x) and brightness (y); click a dot to load it. The legend (wrapping onto more
     rows as needed) filters by category, and a search narrows the dots further. */
 class SoundMapView final : public juce::Component,
-                           public juce::TooltipClient,
                            private juce::Timer
 {
 public:
@@ -34,6 +33,9 @@ public:
     /** Shows only programs matching every search word (combined with the legend filter); legend entries show match counts. */
     void setSearch (const juce::StringArray& terms);
 
+    /** Where a program's dot is drawn, if it is on the map. */
+    std::optional<juce::Point<float>> positionOf (const juce::String& id) const;
+
     /** Selects the first program that is currently visible; returns false if none is. */
     bool selectFirstVisible();
 
@@ -46,7 +48,6 @@ public:
     void mouseExit (const juce::MouseEvent&) override;
     void mouseDown (const juce::MouseEvent&) override;
     bool keyPressed (const juce::KeyPress&) override;
-    juce::String getTooltip() override;
     void visibilityChanged() override;
 
 private:
@@ -97,6 +98,7 @@ private:
     int nearestAlongDecay (int from, bool longer) const;
     void paintAxes (juce::Graphics&, juce::Rectangle<float> area) const;
     void paintLegend (juce::Graphics&) const;
+    void paintHoverCard (juce::Graphics&) const;
     void renderStaticLayer (float scale);
 
     SelectionCallback onSelect;

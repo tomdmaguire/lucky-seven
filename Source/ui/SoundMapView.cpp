@@ -303,6 +303,14 @@ void SoundMapView::setSearch (const juce::StringArray& terms)
     repaint();
 }
 
+std::optional<juce::Point<float>> SoundMapView::positionOf (const juce::String& id) const
+{
+    for (const auto& dot : dots)
+        if (dot.item->entry.id() == id)
+            return dot.position;
+    return std::nullopt;
+}
+
 bool SoundMapView::selectFirstVisible()
 {
     for (const auto& dot : dots)
@@ -401,6 +409,8 @@ void SoundMapView::paint (juce::Graphics& g)
         g.setColour (theme::text);
         g.drawText (label, labelBounds, juce::Justification::centred);
     }
+
+    paintHoverCard (g);
 
 }
 
@@ -684,14 +694,58 @@ bool SoundMapView::keyPressed (const juce::KeyPress& key)
     return true;
 }
 
-juce::String SoundMapView::getTooltip()
+void SoundMapView::paintHoverCard (juce::Graphics& g) const
 {
-    if (hoveredDot < 0 || hoveredDot >= static_cast<int> (dots.size()))
-        return {};
+    if (! juce::isPositiveAndBelow (hoveredDot, static_cast<int> (dots.size())) || ! isShown (dots[static_cast<size_t> (hoveredDot)]))
+        return;
 
-    const auto& item = *dots[static_cast<size_t> (hoveredDot)].item;
-    return item.entry.category + " " + juce::String (item.entry.number).paddedLeft ('0', 2) + "  " + item.entry.name
-         + "\n" + theme::formatSeconds (item.profile->midT60) + " decay. Shift+left/right: shorter/longer with a similar tone";
+    const auto& dot = dots[static_cast<size_t> (hoveredDot)];
+    const auto& entry = dot.item->entry;
+    const auto colour = theme::categoryColour (entry.categoryIndex);
+
+    const juce::Font nameFont (juce::FontOptions (14.0f));
+    const juce::Font detailFont (theme::labelFont (10.0f));
+    const juce::Font hintFont (theme::labelFont (9.0f));
+
+    const auto details = entry.category.toUpperCase() + (entry.number > 0 ? " " + juce::String (entry.number).paddedLeft ('0', 2) : juce::String())
+                       + (dot.item->profile ? juce::String::fromUTF8 ("  \xc2\xb7  ") + theme::formatSeconds (dot.item->profile->midT60) : juce::String());
+    const auto hint = juce::String::fromUTF8 ("SHIFT \xe2\x86\x90 \xe2\x86\x92  SHORTER / LONGER, SIMILAR TONE");
+
+    constexpr auto padding = 10.0f;
+    const auto width = padding * 2.0f + std::max ({ juce::GlyphArrangement::getStringWidth (nameFont, entry.name) + 14.0f,
+                                                    juce::GlyphArrangement::getStringWidth (detailFont, details),
+                                                    juce::GlyphArrangement::getStringWidth (hintFont, hint) });
+    constexpr auto height = 72.0f;
+
+    auto card = juce::Rectangle<float> (width, height).withCentre (dot.position).withY (dot.position.y - height - 16.0f);
+    if (card.getY() < 4.0f)
+        card.setY (dot.position.y + 16.0f);
+    card = card.constrainedWithin (getLocalBounds().toFloat().reduced (4.0f));
+
+    g.setColour (theme::panelRaised.withAlpha (0.97f));
+    g.fillRoundedRectangle (card, 6.0f);
+    g.setColour (colour.withAlpha (0.45f));
+    g.drawRoundedRectangle (card.reduced (0.5f), 6.0f, 1.0f);
+
+    auto content = card.reduced (padding, 8.0f);
+    auto nameRow = content.removeFromTop (20.0f);
+    g.setColour (colour);
+    g.fillEllipse (juce::Rectangle<float> (7.0f, 7.0f).withCentre ({ nameRow.getX() + 3.5f, nameRow.getCentreY() }));
+    g.setColour (theme::text);
+    g.setFont (nameFont);
+    g.drawText (entry.name, nameRow.withTrimmedLeft (14.0f), juce::Justification::centredLeft);
+
+    g.setColour (theme::textDim);
+    g.setFont (detailFont);
+    g.drawText (details, content.removeFromTop (16.0f), juce::Justification::centredLeft);
+
+    content.removeFromTop (4.0f);
+    g.setColour (theme::outline);
+    g.fillRect (content.removeFromTop (1.0f));
+    content.removeFromTop (3.0f);
+    g.setColour (theme::textDim.withAlpha (0.6f));
+    g.setFont (hintFont);
+    g.drawText (hint, content, juce::Justification::centredLeft);
 }
 
 } // namespace lucky
