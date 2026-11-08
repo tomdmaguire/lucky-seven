@@ -38,6 +38,7 @@ private:
     void setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name);
     void setupRangeLabels (Knob& knob, const juce::String& minText, const juce::String& maxText);
     const lucky::BrowserItem* selectedItem() const;
+    static void paintSegmentSeven (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour colour);
 
     LuckySevenProcessor& audioProcessor;
     lucky::LuckyLookAndFeel lookAndFeel;

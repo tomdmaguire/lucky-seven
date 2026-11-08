@@ -345,6 +345,28 @@ void LuckySevenEditor::chooseFolder()
                           });
 }
 
+void LuckySevenEditor::paintSegmentSeven (juce::Graphics& g, juce::Rectangle<float> bounds, juce::Colour colour)
+{
+    const auto scale = bounds.getWidth() / 64.0f;
+    const auto point = [&] (float x, float y) { return bounds.getTopLeft() + juce::Point<float> (x, y) * scale; };
+    const juce::PathStrokeType stroke (5.5f * scale, juce::PathStrokeType::mitered, juce::PathStrokeType::rounded);
+
+    struct Segment { float x1, y1, x2, y2; bool lit; };
+    static constexpr Segment segments[] {
+        { 22, 14, 42, 14, true }, { 45, 17, 45, 30, true }, { 45, 35, 45, 48, true },
+        { 19, 17, 19, 30, false }, { 22, 32.5f, 42, 32.5f, false }, { 19, 35, 19, 48, false }, { 22, 51, 42, 51, false },
+    };
+
+    for (const auto& segment : segments)
+    {
+        juce::Path path;
+        path.startNewSubPath (point (segment.x1, segment.y1));
+        path.lineTo (point (segment.x2, segment.y2));
+        g.setColour (segment.lit ? colour : colour.withAlpha (0.12f));
+        g.strokePath (path, stroke);
+    }
+}
+
 void LuckySevenEditor::paint (juce::Graphics& g)
 {
     using namespace lucky;
@@ -355,11 +377,7 @@ void LuckySevenEditor::paint (juce::Graphics& g)
     g.fillRect (topBar);
 
     auto logo = topBar.removeFromLeft (logoWidth).reduced (16, 0).toFloat();
-    const auto badge = logo.removeFromLeft (26.0f).withSizeKeepingCentre (26.0f, 26.0f);
-    g.setColour (accent);
-    g.drawEllipse (badge.reduced (1.0f), 1.6f);
-    g.setFont (juce::FontOptions (15.0f, juce::Font::bold));
-    g.drawText ("7", badge, juce::Justification::centred);
+    paintSegmentSeven (g, logo.removeFromLeft (26.0f).withSizeKeepingCentre (26.0f, 26.0f), accent);
     g.setColour (theme::text);
     g.setFont (theme::labelFont (15.0f).withStyle ("Bold"));
     g.drawText ("LUCKY SEVEN", logo.withTrimmedLeft (10.0f), juce::Justification::centredLeft);
