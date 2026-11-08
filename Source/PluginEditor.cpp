@@ -17,22 +17,15 @@ juce::String formatHz (double hertz)
     return hertz >= 1000.0 ? juce::String (hertz / 1000.0, hertz >= 10000.0 ? 1 : 2) + " kHz" : juce::String (juce::roundToInt (hertz)) + " Hz";
 }
 
-std::unique_ptr<juce::Drawable> makeFolderIcon (juce::Colour colour)
+std::unique_ptr<juce::Drawable> makeMenuIcon (juce::Colour colour)
 {
     juce::Path path;
-    path.startNewSubPath (2.0f, 5.0f);
-    path.lineTo (8.0f, 5.0f);
-    path.lineTo (10.0f, 7.0f);
-    path.lineTo (20.0f, 7.0f);
-    path.lineTo (20.0f, 18.0f);
-    path.lineTo (2.0f, 18.0f);
-    path.closeSubPath();
+    for (const auto x : { 4.0f, 11.0f, 18.0f })
+        path.addEllipse (x - 1.6f, 9.4f, 3.2f, 3.2f);
 
     auto drawable = std::make_unique<juce::DrawablePath>();
     drawable->setPath (path);
-    drawable->setFill (juce::Colours::transparentBlack);
-    drawable->setStrokeFill (colour);
-    drawable->setStrokeType (juce::PathStrokeType (1.4f));
+    drawable->setFill (colour);
     return drawable;
 }
 } // namespace
@@ -76,13 +69,13 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     favouriteButton.onClick = [this] { audioProcessor.getCatalogue().toggleFavourite (shownSelection); };
     addAndMakeVisible (favouriteButton);
 
-    const auto idleIcon = makeFolderIcon (lucky::theme::textDim);
-    const auto hoverIcon = makeFolderIcon (lucky::theme::text);
-    folderButton.setImages (idleIcon.get(), hoverIcon.get());
-    folderButton.setEdgeIndent (14);
-    folderButton.onClick = [this] { chooseFolder(); };
-    folderButton.setTooltip ("IR folder: " + audioProcessor.getCatalogue().getRoot().getFullPathName());
-    addAndMakeVisible (folderButton);
+    const auto idleIcon = makeMenuIcon (lucky::theme::textDim);
+    const auto hoverIcon = makeMenuIcon (lucky::theme::text);
+    menuButton.setImages (idleIcon.get(), hoverIcon.get());
+    menuButton.setEdgeIndent (16);
+    menuButton.onClick = [this] { showMenu(); };
+    menuButton.setTooltip ("IR folder options");
+    addAndMakeVisible (menuButton);
 
     setupKnob (predelay, LuckySevenProcessor::predelayId, "PRE-DELAY");
     setupKnob (decay, LuckySevenProcessor::decayId, "DECAY");
@@ -127,6 +120,7 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     decay.slider.setTooltip ("Shortens the reverb tail; 100% is the original decay");
 
     audioProcessor.getCatalogue().addChangeListener (this);
+    audioProcessor.getCatalogue().rescan();
     refreshItems();
 
     setSize (editorWidth, editorHeight);
@@ -307,6 +301,29 @@ void LuckySevenEditor::timerCallback()
     }
 }
 
+void LuckySevenEditor::showMenu()
+{
+    enum { rescanItem = 1, chooseItem, revealItem };
+    const auto root = audioProcessor.getCatalogue().getRoot();
+
+    juce::PopupMenu menu;
+    menu.addSectionHeader ("IR folder: " + root.getFullPathName());
+    menu.addItem (rescanItem, "Rescan IR folder");
+    menu.addItem (chooseItem, "Choose IR folder...");
+    menu.addItem (revealItem, "Show in Finder", root.exists());
+
+    menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton),
+                        [this, root] (int result)
+                        {
+                            if (result == rescanItem)
+                                audioProcessor.getCatalogue().rescan();
+                            else if (result == chooseItem)
+                                chooseFolder();
+                            else if (result == revealItem)
+                                root.revealToUser();
+                        });
+}
+
 void LuckySevenEditor::chooseFolder()
 {
     chooser = std::make_unique<juce::FileChooser> ("Choose the Bricasti IR folder", audioProcessor.getCatalogue().getRoot());
@@ -318,7 +335,6 @@ void LuckySevenEditor::chooseFolder()
                                   return;
 
                               audioProcessor.getCatalogue().setRoot (folder);
-                              folderButton.setTooltip ("IR folder: " + folder.getFullPathName());
                               audioProcessor.selectIr (audioProcessor.getSelectedIrId());
                           });
 }
@@ -378,7 +394,7 @@ void LuckySevenEditor::resized()
 
     auto topBar = bounds.removeFromTop (topBarHeight);
     topBar.removeFromLeft (logoWidth + 1);
-    folderButton.setBounds (topBar.removeFromRight (iconWidth));
+    menuButton.setBounds (topBar.removeFromRight (iconWidth));
     listTab.setBounds (topBar.removeFromRight (tabWidth));
     mapTab.setBounds (topBar.removeFromRight (tabWidth));
     topBar.removeFromRight (1);

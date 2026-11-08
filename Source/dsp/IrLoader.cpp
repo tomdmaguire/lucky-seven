@@ -8,6 +8,7 @@ namespace
 {
 constexpr int pollIntervalMs = 20;
 constexpr float ratioTolerance = 0.001f;
+constexpr double maxIrSeconds = 30.0;
 } // namespace
 
 IrLoader::IrLoader (ReverbEngine& engineToFeed, std::atomic<float>& decayPercentSource)
@@ -83,6 +84,14 @@ void IrLoader::loadFile (const juce::File& file)
     auto buffer = readIrFile (file, rate);
     if (buffer.getNumSamples() == 0)
         return;
+
+    const auto maxSamples = static_cast<int> (maxIrSeconds * rate);
+    if (buffer.getNumSamples() > maxSamples)
+    {
+        const auto fade = static_cast<int> (0.05 * rate);
+        buffer.setSize (buffer.getNumChannels(), maxSamples, true, true, true);
+        buffer.applyGainRamp (maxSamples - fade, fade, 1.0f, 0.0f);
+    }
 
     normaliseEnergy (buffer);
     trimTail (buffer, rate);

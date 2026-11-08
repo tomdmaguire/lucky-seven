@@ -204,7 +204,7 @@ void SoundMapView::paint (juce::Graphics& g)
     {
         g.setColour (theme::textDim);
         g.setFont (theme::labelFont (13.0f));
-        g.drawText (items.empty() ? "NO IRS FOUND - CHOOSE THE IR FOLDER" : "ANALYSING IRS...",
+        g.drawText (items.empty() ? "NO IRS FOUND - USE THE MENU AT TOP RIGHT TO CHOOSE A FOLDER" : "ANALYSING IRS...",
                     getLocalBounds(), juce::Justification::centred);
         return;
     }

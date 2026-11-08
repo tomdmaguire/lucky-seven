@@ -26,7 +26,7 @@ struct IrEntry
     juce::String name;
     std::map<int, juce::File> filesByRate;
 
-    /** Stable identifier saved with the plugin state, e.g. "Halls/04 Large & Near". */
+    /** Stable identifier saved with the plugin state, e.g. "Halls/04 Large & Near" or "My Rooms/Kitchen". */
     juce::String id() const;
 
     /** File whose sample rate is closest to the given rate. */
@@ -41,10 +41,20 @@ struct TrueStereoIr
     double sampleRate = 0.0;
 };
 
+/** Category indices from here up are user folders; 1-6 are the Bricasti categories. */
+inline constexpr int firstCustomCategoryIndex = 100;
+
+/** Audio file types picked up when scanning the IR folder. */
+inline const juce::String supportedIrWildcard { "*.wav;*.aif;*.aiff;*.flac" };
+
 /** Parses a quad-channel file name; returns nothing for files that are not Bricasti quad IRs. */
 std::optional<ParsedIrName> parseIrFileName (const juce::String& fileName);
 
-/** Recursively scans root for Bricasti quad IRs, merges sample-rate variants and sorts by category then number. */
+/** True for Samplicity's left/right split files, which duplicate the quad files and are skipped. */
+bool isSamplicitySplitFile (const juce::String& fileName);
+
+/** Recursively scans root: Samplicity quad IRs keep their categories and merge sample-rate variants; any other audio
+    file is categorised by its first subfolder ("User" for loose files). Sorted by category, number, then name. */
 std::vector<IrEntry> scanLibrary (const juce::File& root);
 
 /** Reads a WAV file into a buffer; returns an empty buffer on failure. */

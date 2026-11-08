@@ -144,7 +144,6 @@ void IrCatalogue::rescan()
     {
         const juce::ScopedLock scope (lock);
         entries = std::move (scanned);
-        profiles.clear();
     }
 
     sendChangeMessage();

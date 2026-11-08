@@ -52,3 +52,57 @@ public:
 };
 
 static IrLibraryTests irLibraryTests;
+
+class CustomLibraryTests final : public juce::UnitTest
+{
+public:
+    CustomLibraryTests() : juce::UnitTest ("CustomLibrary", "Lucky Seven") {}
+
+    void runTest() override
+    {
+        const auto root = juce::File::createTempFile ("lucky-seven-scan");
+        root.createDirectory();
+
+        writeWav (root.getChildFile ("Samplicity quad/1 Halls 01 Large Hall, 48K.wav"), 4);
+        writeWav (root.getChildFile ("Samplicity quad/1 Halls 01 Large Hall, 44K.wav"), 4);
+        writeWav (root.getChildFile ("Samplicity lr/1 Halls 01 Large Hall, 48K L.wav"), 2);
+        writeWav (root.getChildFile ("My Rooms/Kitchen.wav"), 2);
+        writeWav (root.getChildFile ("My Rooms/Small/Bathroom.wav"), 1);
+        writeWav (root.getChildFile ("Halls/Garage Hall.wav"), 2);
+        writeWav (root.getChildFile ("Loose.wav"), 2);
+
+        const auto entries = lucky::scanLibrary (root);
+        juce::StringArray ids;
+        for (const auto& entry : entries)
+            ids.add (entry.id());
+
+        beginTest ("merges Samplicity rates, skips split files and adds custom folders");
+        expectEquals (ids.joinIntoString (" | "),
+                      juce::String ("Halls/01 Large Hall | Halls/Garage Hall | My Rooms/Kitchen | My Rooms/Small/Bathroom | User/Loose"));
+
+        beginTest ("custom folders get custom category indices; matching names join the Bricasti category");
+        expectEquals (entries[0].filesByRate.size(), static_cast<size_t> (2));
+        expectEquals (entries[1].categoryIndex, 1);
+        expectGreaterOrEqual (entries[2].categoryIndex, lucky::firstCustomCategoryIndex);
+        expect (entries[2].fileForRate (48000.0).existsAsFile());
+
+        root.deleteRecursively();
+    }
+
+private:
+    static void writeWav (const juce::File& file, int channels)
+    {
+        file.getParentDirectory().createDirectory();
+        juce::AudioBuffer<float> buffer (channels, 64);
+        buffer.clear();
+        buffer.setSample (0, 0, 1.0f);
+
+        juce::WavAudioFormat format;
+        std::unique_ptr<juce::OutputStream> stream = file.createOutputStream();
+        const auto options = juce::AudioFormatWriterOptions().withSampleRate (48000.0).withNumChannels (channels).withBitsPerSample (24);
+        if (auto writer = format.createWriterFor (stream, options))
+            writer->writeFromAudioSampleBuffer (buffer, 0, buffer.getNumSamples());
+    }
+};
+
+static CustomLibraryTests customLibraryTests;

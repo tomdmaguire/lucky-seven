@@ -25,6 +25,9 @@ public:
     /** Changes the IR folder, rescans and restarts analysis. */
     void setRoot (const juce::File& newRoot);
 
+    /** Re-reads the IR folder to pick up added, removed or renamed files, then re-analyses anything new. */
+    void rescan();
+
     /** Snapshot of all programs in browse order. */
     std::vector<IrEntry> getEntries() const;
 
@@ -45,7 +48,6 @@ public:
 
 private:
     void run() override;
-    void rescan();
     void loadCache();
     void saveCache() const;
     static juce::String cacheKey (const juce::File& file);

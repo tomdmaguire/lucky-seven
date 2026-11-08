@@ -29,6 +29,7 @@ private:
     void timerCallback() override;
     void refreshItems();
     void chooseFolder();
+    void showMenu();
     void stepProgram (int delta);
     void setView (lucky::BrowserPanel::View view);
     void showOutputMode (int mode);
@@ -46,7 +47,7 @@ private:
     juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
     juce::TextButton programButton;
     lucky::HeartButton favouriteButton;
-    juce::DrawableButton folderButton { "IR folder", juce::DrawableButton::ImageFitted };
+    juce::DrawableButton menuButton { "Menu", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, lowCut, highCut, mix;
     std::array<juce::TextButton, 3> modeButtons;
     std::unique_ptr<juce::ParameterAttachment> modeAttachment;

@@ -7,7 +7,8 @@ namespace lucky
 
 juce::String IrEntry::id() const
 {
-    return category + "/" + juce::String (number).paddedLeft ('0', 2) + " " + name;
+    return number > 0 ? category + "/" + juce::String (number).paddedLeft ('0', 2) + " " + name
+                      : category + "/" + name;
 }
 
 juce::File IrEntry::fileForRate (double sampleRate) const
@@ -41,19 +42,58 @@ std::optional<ParsedIrName> parseIrFileName (const juce::String& fileName)
     return parsed;
 }
 
+bool isSamplicitySplitFile (const juce::String& fileName)
+{
+    static const std::regex pattern (R"(, (44(?:\.1)?|48|88(?:\.2)?|96)K [LR]\.wav$)", std::regex::icase);
+    return std::regex_search (fileName.toStdString(), pattern);
+}
+
 std::vector<IrEntry> scanLibrary (const juce::File& root)
 {
     std::map<juce::String, IrEntry> byId;
+    std::map<juce::String, int> builtInIndexByName;
+    std::vector<std::pair<juce::String, juce::File>> customFiles;
 
-    for (const auto& item : juce::RangedDirectoryIterator (root, true, "*.wav", juce::File::findFiles))
+    for (const auto& item : juce::RangedDirectoryIterator (root, true, supportedIrWildcard, juce::File::findFiles))
     {
-        const auto parsed = parseIrFileName (item.getFile().getFileName());
-        if (! parsed)
+        const auto file = item.getFile();
+        const auto fileName = file.getFileName();
+
+        if (const auto parsed = parseIrFileName (fileName))
+        {
+            IrEntry candidate { parsed->categoryIndex, parsed->category, parsed->number, parsed->name, {} };
+            auto& entry = byId.try_emplace (candidate.id(), candidate).first->second;
+            entry.filesByRate[parsed->sampleRate] = file;
+            builtInIndexByName[parsed->category.toLowerCase()] = parsed->categoryIndex;
+            continue;
+        }
+
+        if (isSamplicitySplitFile (fileName) || fileName.startsWithChar ('.'))
             continue;
 
-        IrEntry candidate { parsed->categoryIndex, parsed->category, parsed->number, parsed->name, {} };
-        auto& entry = byId.try_emplace (candidate.id(), candidate).first->second;
-        entry.filesByRate[parsed->sampleRate] = item.getFile();
+        const auto relative = file.getRelativePathFrom (root);
+        const auto separator = relative.indexOfChar (juce::File::getSeparatorChar());
+        const auto category = separator > 0 ? relative.substring (0, separator) : juce::String ("User");
+        customFiles.emplace_back (category, file);
+    }
+
+    juce::StringArray customCategories;
+    for (const auto& [category, file] : customFiles)
+        if (! builtInIndexByName.count (category.toLowerCase()))
+            customCategories.addIfNotAlreadyThere (category);
+    customCategories.sortNatural();
+
+    for (const auto& [category, file] : customFiles)
+    {
+        const auto builtIn = builtInIndexByName.find (category.toLowerCase());
+        const auto index = builtIn != builtInIndexByName.end() ? builtIn->second : firstCustomCategoryIndex + customCategories.indexOf (category);
+        const auto categoryFolder = root.getChildFile (category);
+        const auto name = (file.isAChildOf (categoryFolder) ? file.getRelativePathFrom (categoryFolder) : file.getFileName())
+                              .upToLastOccurrenceOf (".", false, false)
+                              .replaceCharacter (juce::File::getSeparatorChar(), '/');
+
+        IrEntry candidate { index, category, 0, name, {} };
+        byId.try_emplace (candidate.id(), candidate).first->second.filesByRate[0] = file;
     }
 
     std::vector<IrEntry> entries;
@@ -63,7 +103,11 @@ std::vector<IrEntry> scanLibrary (const juce::File& root)
 
     std::sort (entries.begin(), entries.end(), [] (const IrEntry& a, const IrEntry& b)
     {
-        return std::tie (a.categoryIndex, a.number) < std::tie (b.categoryIndex, b.number);
+        if (a.categoryIndex != b.categoryIndex)
+            return a.categoryIndex < b.categoryIndex;
+        if (a.number != b.number)
+            return (a.number == 0 ? std::numeric_limits<int>::max() : a.number) < (b.number == 0 ? std::numeric_limits<int>::max() : b.number);
+        return a.name.compareNatural (b.name) < 0;
     });
 
     return entries;
