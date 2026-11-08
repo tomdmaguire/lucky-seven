@@ -11,6 +11,10 @@ public:
     static inline const juce::String predelayId { "predelay" };
     static inline const juce::String decayId { "decay" };
     static inline const juce::String mixId { "mix" };
+    static inline const juce::String blendId { "blend" };
+    static inline const juce::String outputModeId { "outputMode" };
+    static inline const juce::StringArray outputModes { "Mix", "Blend", "Send" };
+    static constexpr float blendSilentDb = -60.0f;
     static inline const juce::String lowCutId { "lowCut" };
     static inline const juce::String highCutId { "highCut" };
     static constexpr float lowCutMaxHz = 1000.0f;
@@ -67,6 +71,8 @@ private:
     std::unique_ptr<lucky::IrLoader> loader;
     std::atomic<float>* predelayMs = nullptr;
     std::atomic<float>* mixPercent = nullptr;
+    std::atomic<float>* blendDb = nullptr;
+    std::atomic<float>* outputMode = nullptr;
     std::atomic<float>* lowCutHz = nullptr;
     std::atomic<float>* highCutHz = nullptr;
     double hostSampleRate = 48000.0;

@@ -14,6 +14,8 @@ LuckySevenProcessor::LuckySevenProcessor()
 {
     predelayMs = parameters.getRawParameterValue (predelayId);
     mixPercent = parameters.getRawParameterValue (mixId);
+    blendDb = parameters.getRawParameterValue (blendId);
+    outputMode = parameters.getRawParameterValue (outputModeId);
     lowCutHz = parameters.getRawParameterValue (lowCutId);
     highCutHz = parameters.getRawParameterValue (highCutId);
     loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId));
@@ -46,6 +48,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
                                                      Range (10.0f, 100.0f, 0.1f), 100.0f, percentLabel),
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { mixId, 1 }, "Mix",
                                                      Range (0.0f, 100.0f, 0.1f), 30.0f, percentLabel),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { blendId, 1 }, "Blend",
+                                                     Range (blendSilentDb, 6.0f, 0.1f, 2.5f), -15.0f,
+                                                     juce::AudioParameterFloatAttributes().withLabel ("dB")),
+        std::make_unique<juce::AudioParameterChoice> (juce::ParameterID { outputModeId, 1 }, "Output Mode", outputModes, 0),
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { lowCutId, 2 }, "Low Cut",
                                                      logRange (lucky::ReverbEngine::minCutHz, lowCutMaxHz),
                                                      lucky::ReverbEngine::minCutHz, hertzLabel),
@@ -83,7 +89,21 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         buffer.copyFrom (1, 0, buffer, 0, 0, buffer.getNumSamples());
 
     engine.setPredelayMs (predelayMs->load());
-    engine.setMix (mixPercent->load() / 100.0f);
+    const auto mode = juce::roundToInt (outputMode->load());
+    if (mode == 1)
+    {
+        const auto db = blendDb->load();
+        engine.setOutputGains (1.0f, db <= blendSilentDb ? 0.0f : juce::Decibels::decibelsToGain (db));
+    }
+    else if (mode == 2)
+    {
+        engine.setOutputGains (0.0f, 1.0f);
+    }
+    else
+    {
+        const auto wet = mixPercent->load() / 100.0f;
+        engine.setOutputGains (1.0f - wet, wet);
+    }
     engine.setWetFilter (lowCutHz->load(), highCutHz->load());
     engine.process (buffer);
 }

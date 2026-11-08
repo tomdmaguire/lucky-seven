@@ -7,6 +7,7 @@ namespace
 {
 constexpr double predelaySmoothingSeconds = 0.05;
 constexpr double filterSmoothingSeconds = 0.03;
+constexpr double gainSmoothingSeconds = 0.03;
 constexpr int filterUpdateInterval = 16;
 constexpr float butterworthQ = 0.70710678f;
 constexpr float silenceThreshold = 1.0e-6f;
@@ -18,7 +19,6 @@ ReverbEngine::ReverbEngine (int headSize)
     : fromLeft (juce::dsp::Convolution::NonUniform { headSize }, queue),
       fromRight (juce::dsp::Convolution::NonUniform { headSize }, queue)
 {
-    mixer.setMixingRule (juce::dsp::DryWetMixingRule::linear);
 }
 
 void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
@@ -29,12 +29,13 @@ void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
     const juce::dsp::ProcessSpec stereoSpec { sampleRate, static_cast<juce::uint32> (capacity), 2 };
     fromLeft.prepare (stereoSpec);
     fromRight.prepare (stereoSpec);
-    mixer.prepare (stereoSpec);
 
     predelay.setMaximumDelayInSamples (static_cast<int> (std::ceil (maxPredelayMs * 0.001 * sampleRate)) + 1);
     predelay.prepare (stereoSpec);
 
     predelaySamples.reset (sampleRate, predelaySmoothingSeconds);
+    dryGain.reset (sampleRate, gainSmoothingSeconds);
+    wetGain.reset (sampleRate, gainSmoothingSeconds);
     lowCutHz.reset (sampleRate, filterSmoothingSeconds);
     highCutHz.reset (sampleRate, filterSmoothingSeconds);
 
@@ -48,6 +49,7 @@ void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
 
     leftBus.setSize (2, capacity);
     rightBus.setSize (2, capacity);
+    dryBus.setSize (2, capacity);
     reset();
 }
 
@@ -56,7 +58,8 @@ void ReverbEngine::reset()
     fromLeft.reset();
     fromRight.reset();
     predelay.reset();
-    mixer.reset();
+    dryGain.setCurrentAndTargetValue (dryGain.getTargetValue());
+    wetGain.setCurrentAndTargetValue (wetGain.getTargetValue());
     predelaySamples.setCurrentAndTargetValue (predelaySamples.getTargetValue());
     lowCutHz.setCurrentAndTargetValue (lowCutHz.getTargetValue());
     highCutHz.setCurrentAndTargetValue (highCutHz.getTargetValue());
@@ -73,9 +76,10 @@ void ReverbEngine::setPredelayMs (float milliseconds)
     predelaySamples.setTargetValue (static_cast<float> (clamped * 0.001 * currentSampleRate));
 }
 
-void ReverbEngine::setMix (float wetProportion)
+void ReverbEngine::setOutputGains (float dry, float wet)
 {
-    mixer.setWetMixProportion (juce::jlimit (0.0f, 1.0f, wetProportion));
+    dryGain.setTargetValue (std::max (dry, 0.0f));
+    wetGain.setTargetValue (std::max (wet, 0.0f));
 }
 
 void ReverbEngine::setWetFilter (float lowCutFrequency, float highCutFrequency)
@@ -154,7 +158,8 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
 
     auto ioBlock = juce::dsp::AudioBlock<float> (buffer).getSubBlock (static_cast<size_t> (start), static_cast<size_t> (length))
                                                          .getSubsetChannelBlock (0, static_cast<size_t> (numChannels));
-    mixer.pushDrySamples (ioBlock);
+    for (int ch = 0; ch < numChannels; ++ch)
+        dryBus.copyFrom (ch, 0, buffer, ch, start, length);
 
     const auto* inLeft = buffer.getReadPointer (0, start);
     const auto* inRight = buffer.getReadPointer (numChannels - 1, start);
@@ -201,7 +206,32 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
     }
 
     filterWet (ioBlock);
-    mixer.mixWetSamples (ioBlock);
+
+    applyOutputGains (buffer, start, length, numChannels);
+}
+
+void ReverbEngine::applyOutputGains (juce::AudioBuffer<float>& buffer, int start, int length, int numChannels)
+{
+    if (! dryGain.isSmoothing() && ! wetGain.isSmoothing())
+    {
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            buffer.applyGain (ch, start, length, wetGain.getTargetValue());
+            buffer.addFrom (ch, start, dryBus, ch, 0, length, dryGain.getTargetValue());
+        }
+        return;
+    }
+
+    std::array<float*, 2> out { buffer.getWritePointer (0, start), buffer.getWritePointer (numChannels - 1, start) };
+    std::array<const float*, 2> dry { dryBus.getReadPointer (0), dryBus.getReadPointer (numChannels - 1) };
+
+    for (int i = 0; i < length; ++i)
+    {
+        const auto dryNow = dryGain.getNextValue();
+        const auto wetNow = wetGain.getNextValue();
+        for (size_t ch = 0; ch < static_cast<size_t> (numChannels); ++ch)
+            out[ch][i] = out[ch][i] * wetNow + dry[ch][i] * dryNow;
+    }
 }
 
 } // namespace lucky

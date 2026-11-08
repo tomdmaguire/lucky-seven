@@ -30,6 +30,7 @@ private:
     void chooseFolder();
     void stepProgram (int delta);
     void setView (lucky::BrowserPanel::View view);
+    void showOutputMode (int mode);
     void applyAccent();
     void setupLabel (juce::Label& label, const juce::String& text);
     void setupKnob (Knob& knob, const juce::String& parameterId, const juce::String& name);
@@ -44,6 +45,9 @@ private:
     juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
     juce::DrawableButton folderButton { "IR folder", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, lowCut, highCut, mix;
+    std::array<juce::TextButton, 3> modeButtons;
+    std::unique_ptr<juce::ParameterAttachment> modeAttachment;
+    int outputMode = -1;
     std::unique_ptr<juce::FileChooser> chooser;
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;

@@ -31,7 +31,7 @@ public:
     {
         lucky::ReverbEngine engine;
         engine.prepare (sampleRate, blockSize);
-        engine.setMix (1.0f);
+        engine.setOutputGains (0.0f, 1.0f);
         engine.loadIr (makeDecayingIr());
 
         juce::AudioBuffer<float> block (2, blockSize);
@@ -74,6 +74,36 @@ public:
         block.clear();
         engine.process (block);
         expectEquals (blockPeak (block), 0.0f);
+
+        beginTest ("dry passes at exactly unity with the reverb at -inf");
+        expectLessThan (dryError (1.0f, 0.0f, 1.0f), 1.0e-6f);
+
+        beginTest ("send mode removes the dry signal");
+        expectLessThan (dryError (0.0f, 0.0f, 0.0f), 1.0e-6f);
+    }
+
+    /** Largest difference between output and input * expectedDryGain with the given output gains and no IR loaded. */
+    static float dryError (float dry, float wet, float expectedDryGain)
+    {
+        lucky::ReverbEngine engine;
+        engine.prepare (sampleRate, blockSize);
+        engine.setOutputGains (dry, wet);
+        engine.reset();
+
+        juce::AudioBuffer<float> input (2, blockSize);
+        juce::Random random (3);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < blockSize; ++i)
+                input.setSample (ch, i, random.nextFloat() - 0.5f);
+
+        auto output = input;
+        engine.process (output);
+
+        auto worst = 0.0f;
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < blockSize; ++i)
+                worst = std::max (worst, std::abs (output.getSample (ch, i) - input.getSample (ch, i) * expectedDryGain));
+        return worst;
     }
 };
 

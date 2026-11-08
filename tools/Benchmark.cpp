@@ -14,7 +14,7 @@ Result measure (const juce::AudioBuffer<float>& quad, int headSize, int blockSiz
 {
     lucky::ReverbEngine engine (headSize);
     engine.prepare (sampleRate, blockSize);
-    engine.setMix (1.0f);
+    engine.setOutputGains (0.0f, 1.0f);
     engine.setWetFilter (80.0f, 12000.0f);
 
     juce::AudioBuffer<float> copy (quad);

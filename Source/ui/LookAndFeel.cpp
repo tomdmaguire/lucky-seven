@@ -30,7 +30,7 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
     const auto bounds = juce::Rectangle<int> (x, y, width, height).toFloat().reduced (4.0f);
     const auto radius = std::min (bounds.getWidth(), bounds.getHeight()) * 0.5f;
     const auto centre = bounds.getCentre();
-    const auto colour = slider.findColour (juce::Slider::rotarySliderFillColourId);
+    const auto colour = slider.isEnabled() ? slider.findColour (juce::Slider::rotarySliderFillColourId) : theme::textDim.withAlpha (0.5f);
     const auto angle = startAngle + sliderPos * (endAngle - startAngle);
 
     g.setColour (colour.withAlpha (0.07f));
@@ -79,9 +79,9 @@ void LuckyLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& bu
     }
 }
 
-juce::Font LuckyLookAndFeel::getTextButtonFont (juce::TextButton&, int)
+juce::Font LuckyLookAndFeel::getTextButtonFont (juce::TextButton& button, int)
 {
-    return theme::labelFont (13.0f);
+    return theme::labelFont (button.getProperties()["small"] ? 10.5f : 13.0f);
 }
 
 } // namespace lucky

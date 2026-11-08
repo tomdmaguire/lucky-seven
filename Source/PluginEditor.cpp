@@ -87,7 +87,24 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     highCut.slider.setTooltip ("High cut on the reverb only, 12 dB/oct");
 
     predelay.slider.textFromValueFunction = [] (double ms) { return juce::String (juce::roundToInt (ms)) + " ms"; };
-    mix.slider.textFromValueFunction = [] (double percent) { return juce::String (juce::roundToInt (percent)) + "%"; };
+    mix.label.setVisible (false);
+    for (size_t i = 0; i < modeButtons.size(); ++i)
+    {
+        auto& button = modeButtons[i];
+        button.setButtonText (LuckySevenProcessor::outputModes[static_cast<int> (i)].toUpperCase());
+        button.getProperties().set ("small", true);
+        button.setClickingTogglesState (false);
+        button.onClick = [this, i] { modeAttachment->setValueAsCompleteGesture (static_cast<float> (i)); };
+        addAndMakeVisible (button);
+    }
+    modeButtons[0].setTooltip ("Mix: crossfade between dry and reverb");
+    modeButtons[1].setTooltip ("Blend: dry stays at 0 dB, the knob sets the reverb level");
+    modeButtons[2].setTooltip ("Send: 100% reverb, for return tracks");
+
+    modeAttachment = std::make_unique<juce::ParameterAttachment> (
+        *audioProcessor.getParameters().getParameter (LuckySevenProcessor::outputModeId),
+        [this] (float value) { showOutputMode (juce::roundToInt (value)); });
+    modeAttachment->sendInitialUpdate();
     decay.slider.textFromValueFunction = [this] (double percent)
     {
         const auto original = audioProcessor.getOriginalT60();
@@ -151,6 +168,40 @@ void LuckySevenEditor::setView (lucky::BrowserPanel::View view)
                                                       lucky::BrowserPanel::viewToString (view), nullptr);
 }
 
+void LuckySevenEditor::showOutputMode (int mode)
+{
+    if (mode == outputMode)
+        return;
+
+    outputMode = mode;
+    for (size_t i = 0; i < modeButtons.size(); ++i)
+        modeButtons[i].setToggleState (static_cast<int> (i) == mode, juce::dontSendNotification);
+
+    mix.attachment.reset();
+    if (mode == 1)
+    {
+        mix.slider.textFromValueFunction = [] (double db)
+        {
+            return db <= LuckySevenProcessor::blendSilentDb ? juce::String ("-INF") : juce::String (db, 1) + " dB";
+        };
+        mix.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+            audioProcessor.getParameters(), LuckySevenProcessor::blendId, mix.slider);
+    }
+    else
+    {
+        mix.slider.textFromValueFunction = [mode] (double percent)
+        {
+            return mode == 2 ? juce::String ("WET") : juce::String (juce::roundToInt (percent)) + "%";
+        };
+        mix.attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment> (
+            audioProcessor.getParameters(), LuckySevenProcessor::mixId, mix.slider);
+    }
+
+    mix.slider.setEnabled (mode != 2);
+    mix.slider.setTooltip (mode == 2 ? "Send mode: 100% reverb, set the level with the return fader" : juce::String());
+    mix.slider.repaint();
+}
+
 void LuckySevenEditor::changeListenerCallback (juce::ChangeBroadcaster*)
 {
     refreshItems();
@@ -191,6 +242,12 @@ void LuckySevenEditor::applyAccent()
     {
         component->setColour (juce::Slider::rotarySliderFillColourId, accent);
         component->repaint();
+    }
+
+    for (auto& button : modeButtons)
+    {
+        button.setColour (juce::Slider::rotarySliderFillColourId, accent);
+        button.repaint();
     }
 }
 
@@ -316,6 +373,13 @@ void LuckySevenEditor::resized()
         knob->label.setBounds (slot.removeFromTop (18));
         const auto knobBounds = slot.withSizeKeepingCentre (knobSize, knobSize);
         knob->slider.setBounds (knobBounds);
+
+        if (knob == &mix)
+        {
+            auto modeRow = knob->label.getBounds().withSizeKeepingCentre (150, 18);
+            for (auto& button : modeButtons)
+                button.setBounds (modeRow.removeFromLeft (50));
+        }
 
         const auto rangeRow = juce::Rectangle<int> (knobBounds.getX() - 44, knobBounds.getBottom() - 12, knobBounds.getWidth() + 88, 14);
         knob->minLabel.setBounds (rangeRow.withWidth (50));

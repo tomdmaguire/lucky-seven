@@ -6,7 +6,7 @@
 namespace lucky
 {
 
-/** True-stereo convolution reverb: predelay -> (L-in and R-in convolutions summed) -> dry/wet mix. */
+/** True-stereo convolution reverb: predelay -> (L-in and R-in convolutions summed) -> low/high cut -> dry and wet gains. */
 class ReverbEngine
 {
 public:
@@ -28,8 +28,8 @@ public:
     /** Sets the target predelay; changes are smoothed. */
     void setPredelayMs (float milliseconds);
 
-    /** Sets the wet proportion between 0 and 1. */
-    void setMix (float wetProportion);
+    /** Sets the linear gains applied to the dry and reverb signals; changes are smoothed. */
+    void setOutputGains (float dryGain, float wetGain);
 
     /** Sets the 12 dB/oct low and high cut applied to the reverb signal only. */
     void setWetFilter (float lowCutHz, float highCutHz);
@@ -47,17 +47,18 @@ private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int length);
     void filterWet (juce::dsp::AudioBlock<float> wet);
     bool isIdle (const juce::AudioBuffer<float>& buffer);
+    void applyOutputGains (juce::AudioBuffer<float>& buffer, int start, int length, int numChannels);
 
     using Filter = juce::dsp::StateVariableTPTFilter<float>;
 
     juce::dsp::ConvolutionMessageQueue queue;
     juce::dsp::Convolution fromLeft, fromRight;
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> predelay;
-    juce::dsp::DryWetMixer<float> mixer;
+    juce::SmoothedValue<float> dryGain { 1.0f }, wetGain { 0.0f };
     juce::SmoothedValue<float> predelaySamples;
     Filter lowCut, highCut;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> lowCutHz { minCutHz }, highCutHz { maxCutHz };
-    juce::AudioBuffer<float> leftBus, rightBus;
+    juce::AudioBuffer<float> leftBus, rightBus, dryBus;
     double currentSampleRate = 48000.0;
     int capacity = 0;
     juce::int64 silentSamples = 0;
