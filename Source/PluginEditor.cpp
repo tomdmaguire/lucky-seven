@@ -5,7 +5,7 @@ namespace
 constexpr int editorWidth = 900;
 constexpr int editorHeight = 600;
 constexpr int topBarHeight = 48;
-constexpr int stripHeight = 150;
+constexpr int stripHeight = 164;
 constexpr int logoWidth = 196;
 constexpr int tabWidth = 96;
 constexpr int pillWidth = 340;
@@ -37,8 +37,10 @@ LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     : AudioProcessorEditor (&p),
       audioProcessor (p),
       browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); }),
-      eq (*p.getParameters().getParameter (LuckySevenProcessor::lowCutId),
-          *p.getParameters().getParameter (LuckySevenProcessor::highCutId))
+      eq ({ *p.getParameters().getParameter (LuckySevenProcessor::eqFrequencyId),
+            *p.getParameters().getParameter (LuckySevenProcessor::eqWidthId),
+            *p.getParameters().getParameter (LuckySevenProcessor::lowCutOnId),
+            *p.getParameters().getParameter (LuckySevenProcessor::highCutOnId) })
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (browser);
@@ -173,10 +175,13 @@ void LuckySevenEditor::stepProgram (int delta)
     if (items.empty())
         return;
 
-    const auto current = std::find_if (items.begin(), items.end(), [this] (const auto& item) { return item.entry.id() == shownSelection; });
-    const auto index = current == items.end() ? 0 : static_cast<int> (std::distance (items.begin(), current));
-    const auto count = static_cast<int> (items.size());
-    audioProcessor.selectIr (items[static_cast<size_t> ((index + delta + count) % count)].entry.id());
+    auto ordered = items;
+    std::sort (ordered.begin(), ordered.end(), lucky::alphabeticalOrder);
+
+    const auto current = std::find_if (ordered.begin(), ordered.end(), [this] (const auto& item) { return item.entry.id() == shownSelection; });
+    const auto index = current == ordered.end() ? 0 : static_cast<int> (std::distance (ordered.begin(), current));
+    const auto count = static_cast<int> (ordered.size());
+    audioProcessor.selectIr (ordered[static_cast<size_t> ((index + delta + count) % count)].entry.id());
 }
 
 void LuckySevenEditor::timerCallback()
@@ -234,7 +239,7 @@ void LuckySevenEditor::paint (juce::Graphics& g)
     g.drawText ("LUCKY SEVEN", logo.withTrimmedLeft (10.0f), juce::Justification::centredLeft);
 
     g.setColour (theme::background);
-    for (const auto x : { logoWidth, logoWidth + tabWidth * 2, getWidth() - iconWidth })
+    for (const auto x : { logoWidth, getWidth() - iconWidth - tabWidth * 2 - 1, getWidth() - iconWidth })
         g.fillRect (x, 0, 1, topBarHeight);
 
     const auto pill = previousButton.getBounds().getUnion (nextButton.getBounds()).toFloat();
@@ -269,12 +274,13 @@ void LuckySevenEditor::resized()
 
     auto topBar = bounds.removeFromTop (topBarHeight);
     topBar.removeFromLeft (logoWidth + 1);
-    mapTab.setBounds (topBar.removeFromLeft (tabWidth));
-    listTab.setBounds (topBar.removeFromLeft (tabWidth));
     folderButton.setBounds (topBar.removeFromRight (iconWidth));
+    listTab.setBounds (topBar.removeFromRight (tabWidth));
+    mapTab.setBounds (topBar.removeFromRight (tabWidth));
+    topBar.removeFromRight (1);
 
     auto pill = topBar.withSizeKeepingCentre (pillWidth, 30);
-    pill.setX (topBar.getRight() - pillWidth - 16);
+    pill.setX (topBar.getX() + 16);
     previousButton.setBounds (pill.removeFromLeft (30));
     nextButton.setBounds (pill.removeFromRight (30));
 

@@ -10,35 +10,75 @@ constexpr float minHz = 20.0f;
 constexpr float maxHz = 20000.0f;
 constexpr float topDb = 6.0f;
 constexpr float bottomDb = -30.0f;
-constexpr float minWidthOctaves = 1.0f;
-constexpr int filterOrder = 4;
-constexpr float dotRadius = 7.0f;
-constexpr float pixelsPerOctaveOfWidth = 12.0f;
+constexpr int filterOrder = 2;
+constexpr float handleRadius = 7.0f;
+constexpr float pixelsPerOctave = 14.0f;
+constexpr int toggleHeight = 20;
+constexpr int readoutHeight = 16;
 
-const float maxWidthOctaves = std::log2 (maxHz / minHz);
 const std::array<float, 9> gridFrequencies { 50.0f, 100.0f, 200.0f, 500.0f, 1000.0f, 2000.0f, 5000.0f, 10000.0f, 20000.0f };
 
 juce::String formatHz (float hertz)
 {
-    return hertz >= 1000.0f ? juce::String (hertz / 1000.0f, hertz >= 10000.0f ? 0 : 1) + "k" : juce::String (juce::roundToInt (hertz));
+    return hertz >= 1000.0f ? juce::String (hertz / 1000.0f, hertz >= 10000.0f ? 1 : 2) + " kHz" : juce::String (juce::roundToInt (hertz)) + " Hz";
+}
+
+bool isOn (const juce::RangedAudioParameter& parameter)
+{
+    return parameter.getValue() >= 0.5f;
 }
 } // namespace
 
-EqView::EqView (juce::RangedAudioParameter& lowCut, juce::RangedAudioParameter& highCut)
-    : lowParameter (lowCut),
-      highParameter (highCut),
-      lowAttachment (lowCut, [this] (float value) { lowHz = value; repaint(); }),
-      highAttachment (highCut, [this] (float value) { highHz = value; repaint(); })
+EqView::EqView (Parameters params)
+    : parameters (params),
+      frequencyAttachment (params.frequency, [this] (float value) { centreHz = value; repaint(); }),
+      widthAttachment (params.width, [this] (float value) { widthOctaves = value; repaint(); }),
+      lowCutAttachment (params.lowCutOn, lowCutButton),
+      highCutAttachment (params.highCutOn, highCutButton)
 {
-    lowAttachment.sendInitialUpdate();
-    highAttachment.sendInitialUpdate();
-    setMouseCursor (juce::MouseCursor::DraggingHandCursor);
-    setTooltip ("Drag sideways to move the band, up/down to widen or narrow it. Double-click to reset.");
+    frequencyAttachment.sendInitialUpdate();
+    widthAttachment.sendInitialUpdate();
+
+    for (auto* button : { &lowCutButton, &highCutButton })
+    {
+        styleToggle (*button);
+        button->onStateChange = [this] { repaint(); };
+        addAndMakeVisible (*button);
+    }
+
+    setTooltip ("Drag the handle sideways for frequency, up/down for width. Double-click to reset.");
+}
+
+std::pair<float, float> EqView::cornersFor (float centre, float width)
+{
+    const auto half = std::exp2 (width * 0.5f);
+    return { juce::jlimit (minHz, maxHz, centre / half), juce::jlimit (minHz, maxHz, centre * half) };
+}
+
+void EqView::styleToggle (juce::TextButton& button)
+{
+    button.setClickingTogglesState (true);
+    button.getProperties().set ("pill", true);
+    button.setColour (juce::Slider::rotarySliderFillColourId, accent);
+}
+
+void EqView::setAccent (juce::Colour colour)
+{
+    if (colour == accent)
+        return;
+
+    accent = colour;
+    for (auto* button : { &lowCutButton, &highCutButton })
+    {
+        button->setColour (juce::Slider::rotarySliderFillColourId, accent);
+        button->repaint();
+    }
+    repaint();
 }
 
 juce::Rectangle<float> EqView::plotArea() const
 {
-    return getLocalBounds().toFloat().reduced (1.0f).withTrimmedBottom (14.0f);
+    return getLocalBounds().toFloat().withTrimmedTop (toggleHeight + 6.0f).withTrimmedBottom (readoutHeight + 2.0f);
 }
 
 float EqView::xForFrequency (float hertz) const
@@ -55,50 +95,42 @@ float EqView::frequencyForX (float x) const
 
 float EqView::yForDb (float decibels) const
 {
-    const auto area = plotArea();
+    const auto area = plotArea().reduced (0.0f, 4.0f);
     return juce::jmap (decibels, topDb, bottomDb, area.getY(), area.getBottom());
 }
 
 float EqView::responseDb (float hertz) const
 {
-    const auto highPass = 1.0f / (1.0f + std::pow (lowHz / hertz, 2.0f * filterOrder));
-    const auto lowPass = 1.0f / (1.0f + std::pow (hertz / highHz, 2.0f * filterOrder));
-    return juce::Decibels::gainToDecibels (std::sqrt (highPass * lowPass), bottomDb - 10.0f);
+    const auto [low, high] = cornersFor (centreHz, widthOctaves);
+    auto power = 1.0f;
+    if (isOn (parameters.lowCutOn))
+        power *= 1.0f / (1.0f + std::pow (low / hertz, 2.0f * filterOrder));
+    if (isOn (parameters.highCutOn))
+        power *= 1.0f / (1.0f + std::pow (hertz / high, 2.0f * filterOrder));
+    return juce::Decibels::gainToDecibels (std::sqrt (power), bottomDb - 10.0f);
 }
 
-juce::Point<float> EqView::dotPosition() const
+juce::Point<float> EqView::handlePosition() const
 {
     const auto area = plotArea();
-    const auto centre = std::sqrt (lowHz * highHz);
-    const auto width = std::log2 (highHz / lowHz);
-    const auto y = juce::jmap (width, minWidthOctaves, maxWidthOctaves, area.getBottom() - dotRadius * 2.0f, yForDb (0.0f) + dotRadius * 2.0f);
-    return { xForFrequency (centre), y };
+    return { xForFrequency (centreHz), juce::jlimit (area.getY() + handleRadius, area.getBottom() - handleRadius, yForDb (responseDb (centreHz))) };
 }
 
 void EqView::paint (juce::Graphics& g)
 {
     const auto area = plotArea();
-    g.setColour (theme::background);
-    g.fillRoundedRectangle (getLocalBounds().toFloat(), 4.0f);
+    const auto active = isOn (parameters.lowCutOn) || isOn (parameters.highCutOn);
 
-    g.setFont (juce::FontOptions (10.0f));
+    g.setColour (theme::background);
+    g.fillRoundedRectangle (area, 4.0f);
+
     for (const auto hertz : gridFrequencies)
     {
-        const auto x = xForFrequency (hertz);
-        g.setColour (theme::outline.withAlpha (0.6f));
-        g.drawVerticalLine (juce::roundToInt (x), area.getY(), area.getBottom());
-        if (hertz == 100.0f || hertz == 1000.0f || hertz == 10000.0f)
-        {
-            g.setColour (theme::textDim);
-            g.drawText (formatHz (hertz), juce::Rectangle<float> (30.0f, 12.0f).withCentre ({ x, area.getBottom() + 7.0f }), juce::Justification::centred);
-        }
+        g.setColour (theme::grid);
+        g.drawVerticalLine (juce::roundToInt (xForFrequency (hertz)), area.getY(), area.getBottom());
     }
-
     for (const auto decibels : { 0.0f, -12.0f, -24.0f })
-    {
-        g.setColour (theme::outline.withAlpha (decibels == 0.0f ? 0.9f : 0.5f));
         g.drawHorizontalLine (juce::roundToInt (yForDb (decibels)), area.getX(), area.getRight());
-    }
 
     juce::Path curve;
     for (auto x = area.getX(); x <= area.getRight(); x += 1.0f)
@@ -110,90 +142,88 @@ void EqView::paint (juce::Graphics& g)
             curve.lineTo (point);
     }
 
-    auto fill = curve;
-    fill.lineTo (area.getBottomRight());
-    fill.lineTo (area.getBottomLeft());
-    fill.closeSubPath();
-    g.setColour (accent.withAlpha (0.1f));
-    g.fillPath (fill);
-
-    g.setColour (accent);
+    const auto curveColour = active ? accent : theme::textDim;
+    g.setColour (curveColour);
     g.strokePath (curve, juce::PathStrokeType (1.8f));
 
-    const auto dot = dotPosition();
-    g.setColour (accent.withAlpha (0.2f));
-    g.fillEllipse (juce::Rectangle<float> (dotRadius * 3.0f, dotRadius * 3.0f).withCentre (dot));
-    g.setColour (dragging ? accent.brighter (0.3f) : accent);
-    g.fillEllipse (juce::Rectangle<float> (dotRadius * 2.0f, dotRadius * 2.0f).withCentre (dot));
+    const auto handle = handlePosition();
+    const auto handleBounds = juce::Rectangle<float> (handleRadius * 2.0f, handleRadius * 2.0f).withCentre (handle);
+    if (dragging || hovering)
+    {
+        g.setColour (curveColour);
+        g.fillEllipse (handleBounds);
+    }
+    else
+    {
+        g.setColour (theme::background);
+        g.fillEllipse (handleBounds);
+        g.setColour (curveColour);
+        g.drawEllipse (handleBounds.reduced (0.75f), 1.5f);
+    }
 
-    g.setColour (theme::textDim);
-    g.setFont (theme::labelFont (10.0f));
-    const auto readout = (lowHz <= minHz + 0.5f ? juce::String ("--") : formatHz (lowHz)) + " - "
-                       + (highHz >= maxHz - 1.0f ? juce::String ("--") : formatHz (highHz)) + " Hz";
-    g.drawText (readout, area.reduced (6.0f, 3.0f), juce::Justification::topRight);
+    auto readouts = getLocalBounds().removeFromBottom (readoutHeight).toFloat();
+    g.setFont (theme::labelFont (11.0f));
+    g.setColour (active ? accent : theme::textDim);
+    g.drawText (formatHz (centreHz), readouts, juce::Justification::centredLeft);
+    g.drawText (juce::String (widthOctaves, 1) + " oct", readouts, juce::Justification::centredRight);
 }
 
-void EqView::setAccent (juce::Colour colour)
+void EqView::resized()
 {
-    if (colour != accent)
+    auto toggles = getLocalBounds().removeFromTop (toggleHeight);
+    const auto half = toggles.getWidth() / 2;
+    lowCutButton.setBounds (toggles.removeFromLeft (half).withTrimmedRight (3));
+    highCutButton.setBounds (toggles.withTrimmedLeft (3));
+}
+
+void EqView::mouseMove (const juce::MouseEvent& event)
+{
+    const auto over = handlePosition().getDistanceFrom (event.position) < handleRadius * 2.0f;
+    if (over != hovering)
     {
-        accent = colour;
+        hovering = over;
         repaint();
     }
 }
 
-void EqView::setBand (float centreLog2, float widthOctaves)
+void EqView::mouseExit (const juce::MouseEvent&)
 {
-    const auto minLog = std::log2 (minHz), maxLog = std::log2 (maxHz);
-    const auto width = juce::jlimit (minWidthOctaves, maxWidthOctaves, widthOctaves);
-    const auto centre = juce::jlimit (minLog + width * 0.5f, maxLog - width * 0.5f, centreLog2);
-
-    lowAttachment.setValueAsPartOfGesture (std::exp2 (centre - width * 0.5f));
-    highAttachment.setValueAsPartOfGesture (std::exp2 (centre + width * 0.5f));
+    hovering = false;
+    repaint();
 }
 
 void EqView::mouseDown (const juce::MouseEvent&)
 {
     dragging = true;
-    dragStartCentre = 0.5f * (std::log2 (lowHz) + std::log2 (highHz));
-    dragStartWidth = std::log2 (highHz / lowHz);
-    lowAttachment.beginGesture();
-    highAttachment.beginGesture();
+    dragStartLog2 = std::log2 (centreHz);
+    dragStartWidth = widthOctaves;
+    frequencyAttachment.beginGesture();
+    widthAttachment.beginGesture();
     repaint();
 }
 
 void EqView::mouseDrag (const juce::MouseEvent& event)
 {
-    const auto area = plotArea();
-    const auto octavesPerPixel = std::log2 (maxHz / minHz) / area.getWidth();
-    const auto centre = dragStartCentre + static_cast<float> (event.getDistanceFromDragStartX()) * octavesPerPixel;
-    const auto width = dragStartWidth - static_cast<float> (event.getDistanceFromDragStartY()) / pixelsPerOctaveOfWidth;
-    setBand (centre, width);
+    const auto octavesPerPixel = std::log2 (maxHz / minHz) / plotArea().getWidth();
+    const auto log2Hz = dragStartLog2 + static_cast<float> (event.getDistanceFromDragStartX()) * octavesPerPixel;
+    const auto width = dragStartWidth - static_cast<float> (event.getDistanceFromDragStartY()) / pixelsPerOctave;
+
+    frequencyAttachment.setValueAsPartOfGesture (juce::jlimit (minHz, maxHz, std::exp2 (log2Hz)));
+    widthAttachment.setValueAsPartOfGesture (parameters.width.getNormalisableRange().snapToLegalValue (width));
 }
 
 void EqView::mouseUp (const juce::MouseEvent&)
 {
-    lowAttachment.endGesture();
-    highAttachment.endGesture();
+    frequencyAttachment.endGesture();
+    widthAttachment.endGesture();
     dragging = false;
     repaint();
 }
 
 void EqView::mouseDoubleClick (const juce::MouseEvent&)
 {
-    lowAttachment.setValueAsCompleteGesture (lowParameter.convertFrom0to1 (lowParameter.getDefaultValue()));
-    highAttachment.setValueAsCompleteGesture (highParameter.convertFrom0to1 (highParameter.getDefaultValue()));
-}
-
-void EqView::mouseWheelMove (const juce::MouseEvent&, const juce::MouseWheelDetails& wheel)
-{
-    const auto centre = 0.5f * (std::log2 (lowHz) + std::log2 (highHz));
-    const auto width = std::log2 (highHz / lowHz) + wheel.deltaY * 4.0f;
-    lowAttachment.beginGesture();
-    highAttachment.beginGesture();
-    setBand (centre, width);
-    lowAttachment.endGesture();
-    highAttachment.endGesture();
+    frequencyAttachment.setValueAsCompleteGesture (parameters.frequency.convertFrom0to1 (parameters.frequency.getDefaultValue()));
+    widthAttachment.setValueAsCompleteGesture (parameters.width.convertFrom0to1 (parameters.width.getDefaultValue()));
 }
 
 } // namespace lucky

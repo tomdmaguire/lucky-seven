@@ -57,6 +57,23 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
 void LuckyLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& button, const juce::Colour&,
                                              bool isMouseOver, bool)
 {
+    if (button.getProperties()["pill"])
+    {
+        const auto colour = button.findColour (juce::Slider::rotarySliderFillColourId);
+        const auto bounds = button.getLocalBounds().toFloat().reduced (0.75f);
+        if (button.getToggleState())
+        {
+            g.setColour (isMouseOver ? colour.brighter (0.15f) : colour);
+            g.fillRoundedRectangle (bounds, 3.0f);
+        }
+        else
+        {
+            g.setColour (isMouseOver ? colour : colour.withAlpha (0.6f));
+            g.drawRoundedRectangle (bounds, 3.0f, 1.2f);
+        }
+        return;
+    }
+
     if (button.getToggleState())
     {
         g.setColour (button.findColour (juce::Slider::rotarySliderFillColourId));
@@ -69,9 +86,22 @@ void LuckyLookAndFeel::drawButtonBackground (juce::Graphics& g, juce::Button& bu
     }
 }
 
-juce::Font LuckyLookAndFeel::getTextButtonFont (juce::TextButton&, int)
+juce::Font LuckyLookAndFeel::getTextButtonFont (juce::TextButton& button, int)
 {
-    return theme::labelFont (13.0f);
+    return theme::labelFont (button.getProperties()["pill"] ? 10.0f : 13.0f);
+}
+
+void LuckyLookAndFeel::drawButtonText (juce::Graphics& g, juce::TextButton& button, bool isMouseOver, bool isButtonDown)
+{
+    if (! button.getProperties()["pill"])
+    {
+        juce::LookAndFeel_V4::drawButtonText (g, button, isMouseOver, isButtonDown);
+        return;
+    }
+
+    g.setFont (getTextButtonFont (button, button.getHeight()));
+    g.setColour (button.getToggleState() ? theme::background : button.findColour (juce::Slider::rotarySliderFillColourId));
+    g.drawText (button.getButtonText(), button.getLocalBounds(), juce::Justification::centred);
 }
 
 } // namespace lucky

@@ -18,6 +18,8 @@ public:
                                bool isMouseOver, bool isButtonDown) override;
 
     juce::Font getTextButtonFont (juce::TextButton&, int buttonHeight) override;
+
+    void drawButtonText (juce::Graphics&, juce::TextButton&, bool isMouseOver, bool isButtonDown) override;
 };
 
 } // namespace lucky
