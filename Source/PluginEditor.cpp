@@ -313,6 +313,7 @@ void LuckySevenEditor::showMenu()
     const auto root = audioProcessor.getCatalogue().getRoot();
 
     juce::PopupMenu menu;
+    menu.addSectionHeader (juce::String ("Lucky Seven v") + JucePlugin_VersionString);
     menu.addSectionHeader ("IR folder: " + root.getFullPathName());
     menu.addItem (rescanItem, "Rescan IR folder");
     menu.addItem (chooseItem, "Choose IR folder...");
