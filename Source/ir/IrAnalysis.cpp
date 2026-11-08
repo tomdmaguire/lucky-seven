@@ -14,6 +14,12 @@ constexpr double fitUpperDb = -5.0;
 constexpr double fitLowerDbT30 = -35.0;
 constexpr double fitLowerDbT20 = -25.0;
 constexpr double brightnessSkipSeconds = 0.05;
+constexpr double noiseWindowSeconds = 0.01;
+constexpr double directSoundSkipSeconds = 0.01;
+constexpr double cleanFloor = 1.0e-8;
+constexpr double flatSlopeDbPerSecond = 1.5;
+constexpr double floorMargin = 10.0;
+constexpr double noiseFadeSeconds = 0.05;
 
 std::vector<double> bandEnergy (const juce::AudioBuffer<float>& ir, double sampleRate, float centreHz)
 {
@@ -107,8 +113,79 @@ int findOnset (const juce::AudioBuffer<float>& ir)
     return 0;
 }
 
-float estimateT60 (const std::vector<double>& energy, double sampleRate)
+size_t noiseFloorStart (const std::vector<double>& energy, double sampleRate)
 {
+    const auto window = std::max<size_t> (1, static_cast<size_t> (noiseWindowSeconds * sampleRate));
+    const auto windows = energy.size() / window;
+    if (windows < 40)
+        return energy.size();
+
+    std::vector<double> level (windows, 0.0);
+    for (size_t w = 0; w < windows; ++w)
+        level[w] = std::accumulate (energy.begin() + static_cast<std::ptrdiff_t> (w * window),
+                                    energy.begin() + static_cast<std::ptrdiff_t> ((w + 1) * window), 0.0) / static_cast<double> (window);
+
+    const auto peakIndex = static_cast<size_t> (std::distance (level.begin(), std::max_element (level.begin(), level.end())));
+    const auto segment = std::max<size_t> (3, windows / 20);
+    if (peakIndex + 3 * segment >= windows)
+        return energy.size();
+
+    const auto mean = [&] (size_t from, size_t count)
+    {
+        return std::accumulate (level.begin() + static_cast<std::ptrdiff_t> (from),
+                                level.begin() + static_cast<std::ptrdiff_t> (from + count), 0.0) / static_cast<double> (count);
+    };
+
+    const auto floor = mean (windows - segment, segment);
+
+    const auto fitStart = std::max (peakIndex + 1, windows - windows / 4);
+    double sumX = 0.0, sumY = 0.0, sumXX = 0.0, sumXY = 0.0;
+    for (size_t w = fitStart; w < windows; ++w)
+    {
+        const auto x = static_cast<double> (w) * noiseWindowSeconds;
+        const auto y = 10.0 * std::log10 (std::max (level[w], 1.0e-30));
+        sumX += x;
+        sumY += y;
+        sumXX += x * x;
+        sumXY += x * y;
+    }
+    const auto n = static_cast<double> (windows - fitStart);
+    const auto slopeDbPerSecond = (n * sumXY - sumX * sumY) / std::max (n * sumXX - sumX * sumX, 1.0e-12);
+    const auto isFlat = std::abs (slopeDbPerSecond) < flatSlopeDbPerSecond;
+    if (floor <= level[peakIndex] * cleanFloor || ! isFlat)
+        return energy.size();
+
+    for (auto w = windows; w-- > peakIndex;)
+        if (level[w] >= floor * floorMargin)
+            return std::min (energy.size(), (w + 1) * window);
+
+    return energy.size();
+}
+
+void trimNoiseFloor (juce::AudioBuffer<float>& ir, double sampleRate)
+{
+    std::vector<double> energy (static_cast<size_t> (ir.getNumSamples()), 0.0);
+    for (int ch = 0; ch < ir.getNumChannels(); ++ch)
+    {
+        const auto* data = ir.getReadPointer (ch);
+        for (size_t i = 0; i < energy.size(); ++i)
+            energy[i] += static_cast<double> (data[i]) * data[i];
+    }
+
+    const auto cut = static_cast<int> (noiseFloorStart (energy, sampleRate));
+    if (cut >= ir.getNumSamples())
+        return;
+
+    const auto fade = std::min (cut, static_cast<int> (noiseFadeSeconds * sampleRate));
+    ir.setSize (ir.getNumChannels(), cut, true, true, true);
+    ir.applyGainRamp (cut - fade, fade, 1.0f, 0.0f);
+}
+
+float estimateT60 (const std::vector<double>& fullEnergy, double sampleRate)
+{
+    const auto cut = noiseFloorStart (fullEnergy, sampleRate);
+    const std::vector<double> energy (fullEnergy.begin(), fullEnergy.begin() + static_cast<std::ptrdiff_t> (cut));
+
     std::vector<double> edc (energy.size());
     std::partial_sum (energy.rbegin(), energy.rend(), edc.rbegin());
 
@@ -129,14 +206,20 @@ DecayProfile analyse (const juce::AudioBuffer<float>& ir, double sampleRate)
     profile.onsetSample = findOnset (ir);
 
     const auto skip = static_cast<size_t> (profile.onsetSample + static_cast<int> (brightnessSkipSeconds * sampleRate));
-    const auto broadbandT60 = estimateT60 (broadbandEnergy (ir), sampleRate);
+    const auto decayStart = static_cast<std::ptrdiff_t> (profile.onsetSample + static_cast<int> (directSoundSkipSeconds * sampleRate));
+    const auto afterDirectSound = [decayStart] (const std::vector<double>& energy)
+    {
+        return decayStart < static_cast<std::ptrdiff_t> (energy.size()) ? std::vector<double> (energy.begin() + decayStart, energy.end()) : energy;
+    };
+
+    const auto broadbandT60 = estimateT60 (afterDirectSound (broadbandEnergy (ir)), sampleRate);
 
     double weightedLogFrequency = 0.0, totalTailEnergy = 0.0;
 
     for (size_t band = 0; band < analysisBands.size(); ++band)
     {
         const auto energy = bandEnergy (ir, sampleRate, analysisBands[band]);
-        const auto t60 = estimateT60 (energy, sampleRate);
+        const auto t60 = estimateT60 (afterDirectSound (energy), sampleRate);
         profile.bandT60[band] = t60 > 0.0f ? t60 : broadbandT60;
 
         const auto tailEnergy = skip < energy.size() ? std::accumulate (energy.begin() + static_cast<std::ptrdiff_t> (skip), energy.end(), 0.0) : 0.0;

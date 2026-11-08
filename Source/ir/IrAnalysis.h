@@ -21,6 +21,14 @@ struct DecayProfile
 /** Index of the first sample whose magnitude reaches -20 dB relative to the peak across all channels. */
 int findOnset (const juce::AudioBuffer<float>& ir);
 
+/** Sample index after which a recording never rises more than 10 dB above its flat noise floor (hiss), or
+    energy.size() if there is none. A tail still falling when the file ends is not treated as noise, and silent gaps
+    earlier in the file (e.g. after a starting click) are ignored. */
+size_t noiseFloorStart (const std::vector<double>& energy, double sampleRate);
+
+/** Cuts a recording off where it sinks into a flat noise floor, with a short fade; clean recordings are untouched. */
+void trimNoiseFloor (juce::AudioBuffer<float>& ir, double sampleRate);
+
 /** Estimates T60 in seconds from a squared-signal energy envelope using Schroeder backward integration. */
 float estimateT60 (const std::vector<double>& energy, double sampleRate);
 

@@ -72,3 +72,41 @@ public:
 };
 
 static DecayShaperTests decayShaperTests;
+
+class NoiseFloorTests final : public juce::UnitTest
+{
+public:
+    NoiseFloorTests() : juce::UnitTest ("NoiseFloor", "Lucky Seven") {}
+
+    void runTest() override
+    {
+        beginTest ("decay is measured above a hiss floor instead of being stretched by it");
+        auto noisy = makeExponentialNoise (1.0f, 5.0f, 2);
+        juce::Random random (9);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < noisy.getNumSamples(); ++i)
+                noisy.setSample (ch, i, noisy.getSample (ch, i) + (random.nextFloat() - 0.5f) * 0.002f);
+
+        const auto profile = lucky::analyse (noisy, sampleRate);
+        expectWithinAbsoluteError (profile.midT60, 1.0f, 0.15f);
+
+        beginTest ("the hiss tail is trimmed off");
+        auto trimmed = noisy;
+        lucky::trimNoiseFloor (trimmed, sampleRate);
+        expectLessThan (trimmed.getNumSamples(), static_cast<int> (2.5 * sampleRate));
+
+        beginTest ("a long tail that is still decaying when the file ends is left alone");
+        auto truncated = makeExponentialNoise (6.0f, 3.0f, 2);
+        const auto before = truncated.getNumSamples();
+        lucky::trimNoiseFloor (truncated, sampleRate);
+        expectEquals (truncated.getNumSamples(), before);
+
+        beginTest ("a clean IR is left alone");
+        auto clean = makeExponentialNoise (1.0f, 4.0f, 2);
+        const auto cleanLength = clean.getNumSamples();
+        lucky::trimNoiseFloor (clean, sampleRate);
+        expectEquals (clean.getNumSamples(), cleanLength);
+    }
+};
+
+static NoiseFloorTests noiseFloorTests;
