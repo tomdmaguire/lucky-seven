@@ -6,7 +6,8 @@
 namespace lucky
 {
 
-/** Two-column browser: categories on the left, the selected category's programs on the right, both alphabetical. */
+/** Two-column browser: categories on the left, the selected category's programs on the right, both alphabetical.
+    A search box above filters both columns and adds an "All results" entry spanning every category. */
 class ListBrowserView final : public juce::Component,
                               private juce::KeyListener
 {
@@ -21,6 +22,7 @@ public:
     void setSelectedId (const juce::String& id);
 
     void paint (juce::Graphics&) override;
+    void paintOverChildren (juce::Graphics&) override;
     void resized() override;
 
 private:
@@ -32,6 +34,11 @@ private:
     bool keyPressed (const juce::KeyPress& key, juce::Component* originator) override;
 
     void showCategory (int categoryRow);
+    void selectCategoryRow (int categoryRow);
+    void rebuildCategories();
+    void applySearch();
+    bool matchesSearch (const BrowserItem& item) const;
+    bool showsMixedCategories() const;
     std::vector<const BrowserItem*> programsInCategory (int categoryRow) const;
 
     SelectionCallback onSelect, onToggleFavourite;
@@ -40,6 +47,9 @@ private:
     std::unique_ptr<CategoryModel> categoryModel;
     std::unique_ptr<ProgramModel> programModel;
     juce::ListBox categoryList, programList;
+    juce::TextEditor searchBox;
+    juce::TextButton clearSearchButton;
+    juce::StringArray searchTerms;
     juce::String selectedId;
     bool updating = false;
 };
