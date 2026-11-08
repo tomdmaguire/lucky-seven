@@ -218,7 +218,7 @@ ListBrowserView::ListBrowserView (SelectionCallback callback, SelectionCallback 
     categoryList.setModel (categoryModel.get());
     programList.setModel (programModel.get());
 
-    searchBox.setTextToShowWhenEmpty ("Search programs", theme::textDim);
+    searchBox.setTextToShowWhenEmpty ("Search", theme::textDim);
     searchBox.setFont (juce::FontOptions (14.0f));
     searchBox.setIndents (30, 7);
     searchBox.setColour (juce::TextEditor::backgroundColourId, theme::topBar);
@@ -305,6 +305,7 @@ void ListBrowserView::rebuildCategories()
             categories.emplace_back (item.entry.categoryIndex, item.entry.category);
 
     categoryList.updateContent();
+    categoryList.repaint();
 }
 
 void ListBrowserView::applySearch()
