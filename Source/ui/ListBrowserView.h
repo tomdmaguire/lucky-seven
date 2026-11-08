@@ -11,7 +11,7 @@ class ListBrowserView final : public juce::Component,
                               private juce::KeyListener
 {
 public:
-    explicit ListBrowserView (SelectionCallback onSelect);
+    ListBrowserView (SelectionCallback onSelect, SelectionCallback onToggleFavourite);
     ~ListBrowserView() override;
 
     /** Replaces the programs shown, keeping the current selection where possible. */
@@ -26,6 +26,7 @@ public:
 private:
     class CategoryModel;
     class ProgramModel;
+    class ProgramRow;
 
     using juce::Component::keyPressed;
     bool keyPressed (const juce::KeyPress& key, juce::Component* originator) override;
@@ -33,7 +34,7 @@ private:
     void showCategory (int categoryRow);
     std::vector<const BrowserItem*> programsInCategory (int categoryRow) const;
 
-    SelectionCallback onSelect;
+    SelectionCallback onSelect, onToggleFavourite;
     std::vector<BrowserItem> items;
     std::vector<std::pair<int, juce::String>> categories;
     std::unique_ptr<CategoryModel> categoryModel;

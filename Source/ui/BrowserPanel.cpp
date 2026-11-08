@@ -3,7 +3,8 @@
 namespace lucky
 {
 
-BrowserPanel::BrowserPanel (SelectionCallback onSelect) : map (onSelect), list (onSelect)
+BrowserPanel::BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite)
+    : map (onSelect), list (onSelect, std::move (onToggleFavourite))
 {
     addChildComponent (map);
     addChildComponent (list);

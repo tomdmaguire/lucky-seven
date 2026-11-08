@@ -40,7 +40,8 @@ std::unique_ptr<juce::Drawable> makeFolderIcon (juce::Colour colour)
 LuckySevenEditor::LuckySevenEditor (LuckySevenProcessor& p)
     : AudioProcessorEditor (&p),
       audioProcessor (p),
-      browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); })
+      browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); },
+               [this] (const juce::String& id) { audioProcessor.getCatalogue().toggleFavourite (id); })
 {
     setLookAndFeel (&lookAndFeel);
     addAndMakeVisible (browser);

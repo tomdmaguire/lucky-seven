@@ -8,6 +8,7 @@ namespace
 {
 constexpr int rowHeight = 28;
 constexpr int categoryColumnWidth = 190;
+constexpr int heartColumnWidth = 36;
 
 void paintRowBackground (juce::Graphics& g, int width, int height, bool selected, juce::Colour colour)
 {
@@ -75,13 +76,7 @@ public:
 
         g.setFont (juce::FontOptions (14.0f));
         g.setColour (selected ? theme::text : theme::text.withAlpha (0.85f));
-        g.drawText (item.entry.name, 16, 0, width - 110, height, juce::Justification::centredLeft);
-
-        if (item.favourite)
-        {
-            g.setColour (theme::categoryColour (item.entry.categoryIndex));
-            g.fillPath (theme::heartPath ({ static_cast<float> (width) - 92.0f, static_cast<float> (height) * 0.5f - 5.0f, 10.0f, 10.0f }));
-        }
+        g.drawText (item.entry.name, heartColumnWidth, 0, width - heartColumnWidth - 80, height, juce::Justification::centredLeft);
 
         if (item.profile)
         {
@@ -89,6 +84,8 @@ public:
             g.drawText (theme::formatSeconds (item.profile->midT60), width - 76, 0, 64, height, juce::Justification::centredRight);
         }
     }
+
+    juce::Component* refreshComponentForRow (int row, bool, juce::Component* existing) override;
 
     void selectedRowsChanged (int lastRowSelected) override
     {
@@ -105,8 +102,87 @@ private:
     ListBrowserView& owner;
 };
 
-ListBrowserView::ListBrowserView (SelectionCallback callback)
+/** Transparent overlay for a program row: draws the favourite heart and routes clicks to the heart or the row. */
+class ListBrowserView::ProgramRow final : public juce::Component
+{
+public:
+    explicit ProgramRow (ListBrowserView& ownerView) : owner (ownerView) {}
+
+    void update (int newRow, const BrowserItem* newItem)
+    {
+        row = newRow;
+        item = newItem;
+        repaint();
+    }
+
+    void paint (juce::Graphics& g) override
+    {
+        if (item == nullptr || ! (item->favourite || isMouseOver()))
+            return;
+
+        const auto heart = theme::heartPath (heartArea().withSizeKeepingCentre (12.0f, 11.0f));
+        if (item->favourite)
+        {
+            g.setColour (theme::categoryColour (item->entry.categoryIndex));
+            g.fillPath (heart);
+        }
+        else
+        {
+            g.setColour (overHeart ? theme::text : theme::textDim.withAlpha (0.6f));
+            g.strokePath (heart, juce::PathStrokeType (1.2f));
+        }
+    }
+
+    void mouseEnter (const juce::MouseEvent& event) override { mouseMove (event); }
+    void mouseExit (const juce::MouseEvent&) override { overHeart = false; repaint(); }
+
+    void mouseMove (const juce::MouseEvent& event) override
+    {
+        overHeart = heartArea().contains (event.position);
+        setMouseCursor (overHeart ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
+        repaint();
+    }
+
+    void mouseDown (const juce::MouseEvent& event) override
+    {
+        if (item == nullptr)
+            return;
+
+        owner.programList.grabKeyboardFocus();
+        if (heartArea().contains (event.position))
+            owner.onToggleFavourite (item->entry.id());
+        else
+            owner.programList.selectRow (row);
+    }
+
+private:
+    juce::Rectangle<float> heartArea() const
+    {
+        return getLocalBounds().toFloat().withWidth (static_cast<float> (heartColumnWidth)).withTrimmedLeft (8.0f);
+    }
+
+    ListBrowserView& owner;
+    int row = -1;
+    const BrowserItem* item = nullptr;
+    bool overHeart = false;
+};
+
+juce::Component* ListBrowserView::ProgramModel::refreshComponentForRow (int row, bool, juce::Component* existing)
+{
+    auto* rowComponent = dynamic_cast<ProgramRow*> (existing);
+    if (rowComponent == nullptr)
+    {
+        delete existing;
+        rowComponent = new ProgramRow (owner);
+    }
+
+    rowComponent->update (row, row >= 0 && row < getNumRows() ? programs[static_cast<size_t> (row)] : nullptr);
+    return rowComponent;
+}
+
+ListBrowserView::ListBrowserView (SelectionCallback callback, SelectionCallback favouriteCallback)
     : onSelect (std::move (callback)),
+      onToggleFavourite (std::move (favouriteCallback)),
       categoryModel (std::make_unique<CategoryModel> (*this)),
       programModel (std::make_unique<ProgramModel> (*this))
 {

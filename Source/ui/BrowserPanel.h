@@ -12,7 +12,7 @@ class BrowserPanel final : public juce::Component
 public:
     enum class View { map, list };
 
-    explicit BrowserPanel (SelectionCallback onSelect);
+    BrowserPanel (SelectionCallback onSelect, SelectionCallback onToggleFavourite);
 
     void setItems (const std::vector<BrowserItem>& items);
     void setSelectedId (const juce::String& id);
