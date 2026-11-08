@@ -142,6 +142,69 @@ void LuckySevenProcessor::selectIr (const juce::String& id)
     requestSelectedFile();
 }
 
+int LuckySevenProcessor::getActiveSlot() const
+{
+    return static_cast<int> (parameters.state.getProperty (activeSlotProperty, 0));
+}
+
+juce::ValueTree LuckySevenProcessor::findSlot (int slot) const
+{
+    return parameters.state.getChildWithProperty (slotIndexProperty, slot);
+}
+
+juce::ValueTree LuckySevenProcessor::captureSlot (int slot) const
+{
+    juce::ValueTree snapshot (slotType);
+    snapshot.setProperty (slotIndexProperty, slot, nullptr);
+    snapshot.setProperty (irIdProperty, getSelectedIrId(), nullptr);
+
+    for (auto* parameter : AudioProcessor::getParameters())
+        if (const auto* withId = dynamic_cast<juce::AudioProcessorParameterWithID*> (parameter))
+            snapshot.setProperty (juce::Identifier (withId->paramID), parameter->getValue(), nullptr);
+
+    return snapshot;
+}
+
+void LuckySevenProcessor::applySlot (const juce::ValueTree& snapshot)
+{
+    for (auto* parameter : AudioProcessor::getParameters())
+        if (const auto* withId = dynamic_cast<juce::AudioProcessorParameterWithID*> (parameter))
+            if (snapshot.hasProperty (juce::Identifier (withId->paramID)))
+            {
+                parameter->beginChangeGesture();
+                parameter->setValueNotifyingHost (static_cast<float> (snapshot.getProperty (juce::Identifier (withId->paramID))));
+                parameter->endChangeGesture();
+            }
+
+    if (snapshot.hasProperty (irIdProperty))
+        selectIr (snapshot.getProperty (irIdProperty).toString());
+}
+
+void LuckySevenProcessor::switchToSlot (int slot)
+{
+    const auto active = getActiveSlot();
+    if (slot == active)
+        return;
+
+    const auto replaceSlot = [this] (const juce::ValueTree& snapshot)
+    {
+        const auto index = static_cast<int> (snapshot.getProperty (slotIndexProperty));
+        if (auto existing = findSlot (index); existing.isValid())
+            parameters.state.removeChild (existing, nullptr);
+        parameters.state.appendChild (snapshot, nullptr);
+    };
+
+    const auto target = findSlot (slot).createCopy();
+    replaceSlot (captureSlot (active));
+
+    if (target.isValid())
+        applySlot (target);
+    else
+        replaceSlot (captureSlot (slot));
+
+    parameters.state.setProperty (activeSlotProperty, slot, nullptr);
+}
+
 juce::String LuckySevenProcessor::getSelectedIrId() const
 {
     return parameters.state.getProperty (irIdProperty, defaultIrId).toString();

@@ -85,6 +85,22 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     };
     addAndMakeVisible (programButton);
 
+    for (size_t i = 0; i < slotButtons.size(); ++i)
+    {
+        auto& button = slotButtons[i];
+        button.setButtonText (i == 0 ? "A" : "B");
+        button.getProperties().set ("small", true);
+        button.setTooltip ("A/B: compare two complete settings. Each slot remembers the program and every control.");
+        button.onClick = [this, i]
+        {
+            audioProcessor.switchToSlot (static_cast<int> (i));
+            for (size_t k = 0; k < slotButtons.size(); ++k)
+                slotButtons[k].setToggleState (static_cast<int> (k) == audioProcessor.getActiveSlot(), juce::dontSendNotification);
+        };
+        button.setToggleState (static_cast<int> (i) == audioProcessor.getActiveSlot(), juce::dontSendNotification);
+        addAndMakeVisible (button);
+    }
+
     favouriteButton.onClick = [this] { audioProcessor.getCatalogue().toggleFavourite (shownSelection); };
     addAndMakeVisible (favouriteButton);
 
@@ -285,6 +301,11 @@ void LuckySevenView::applyAccent()
     }
 
     favouriteButton.setColour (juce::Slider::rotarySliderFillColourId, accent);
+    for (auto& button : slotButtons)
+    {
+        button.setColour (juce::Slider::rotarySliderFillColourId, accent);
+        button.repaint();
+    }
     favouriteButton.repaint();
 }
 
@@ -311,6 +332,10 @@ void LuckySevenView::timerCallback()
         shownOriginalT60 = original;
         decay.slider.repaint();
     }
+
+    for (size_t k = 0; k < slotButtons.size(); ++k)
+        if (slotButtons[k].getToggleState() != (static_cast<int> (k) == audioProcessor.getActiveSlot()))
+            slotButtons[k].setToggleState (static_cast<int> (k) == audioProcessor.getActiveSlot(), juce::dontSendNotification);
 
     if (const auto selected = audioProcessor.getSelectedIrId(); selected != shownSelection)
     {
@@ -454,6 +479,11 @@ void LuckySevenView::resized()
     nextButton.setBounds (pill.removeFromRight (30));
     favouriteButton.setBounds (pill.removeFromRight (28));
     programButton.setBounds (pill);
+
+    auto slotArea = juce::Rectangle<int> (previousButton.getX() + pillWidth, 0, mapTab.getX() - (previousButton.getX() + pillWidth), topBarHeight)
+                        .withSizeKeepingCentre (64, 24);
+    for (auto& button : slotButtons)
+        button.setBounds (slotArea.removeFromLeft (32));
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
     const auto knobSlot = strip.getWidth() / 5;

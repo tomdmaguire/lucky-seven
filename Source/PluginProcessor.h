@@ -22,6 +22,9 @@ public:
     static inline const juce::Identifier irIdProperty { "irId" };
     static inline const juce::Identifier viewProperty { "view" };
     static inline const juce::Identifier mapFilterProperty { "mapFilter" };
+    static inline const juce::Identifier activeSlotProperty { "abSlot" };
+    static inline const juce::Identifier slotType { "Slot" };
+    static inline const juce::Identifier slotIndexProperty { "index" };
 
     LuckySevenProcessor();
     ~LuckySevenProcessor() override;
@@ -53,6 +56,12 @@ public:
     /** Selects the program with the given catalogue id and starts loading it. */
     void selectIr (const juce::String& id);
 
+    /** Index (0 = A, 1 = B) of the comparison slot currently loaded. */
+    int getActiveSlot() const;
+
+    /** Stores the current settings in the active slot and loads the other one; the first switch copies A to B. Message thread only. */
+    void switchToSlot (int slot);
+
     /** Catalogue id of the selected program. */
     juce::String getSelectedIrId() const;
 
@@ -68,6 +77,9 @@ public:
 private:
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
     void requestSelectedFile();
+    juce::ValueTree captureSlot (int slot) const;
+    void applySlot (const juce::ValueTree& snapshot);
+    juce::ValueTree findSlot (int slot) const;
 
     juce::AudioProcessorValueTreeState parameters;
     juce::SharedResourcePointer<lucky::IrCatalogue> catalogue;

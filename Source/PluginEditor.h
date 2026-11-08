@@ -61,6 +61,7 @@ private:
     juce::DrawableButton menuButton { "Menu", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, lowCut, highCut, mix;
     std::array<juce::TextButton, 3> modeButtons;
+    std::array<juce::TextButton, 2> slotButtons;
     std::unique_ptr<juce::ParameterAttachment> modeAttachment;
     int outputMode = -1;
     std::unique_ptr<juce::FileChooser> chooser;
