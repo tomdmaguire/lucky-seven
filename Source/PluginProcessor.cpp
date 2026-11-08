@@ -102,7 +102,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     else
     {
         const auto wet = mixPercent->load() / 100.0f;
-        engine.setOutputGains (1.0f - wet, wet);
+        engine.setOutputGains (std::sqrt (std::max (0.0f, 1.0f - wet * wet)), wet);
     }
     engine.setWetFilter (lowCutHz->load(), highCutHz->load());
     engine.process (buffer);
