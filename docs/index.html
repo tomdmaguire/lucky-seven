@@ -160,8 +160,8 @@
     </div>
 
     <figure class="shot">
-      <img src="assets/map.png" width="1800" height="1200" alt="Lucky Seven's sound map: 134 coloured dots plotted by decay time and brightness, with rings spreading from the selected Large &amp; Near hall, and the pre-delay, decay, low cut, high cut and mix knobs below.">
-      <figcaption>The sound map. Every program sits by how long it rings (left to right) and how bright it sounds (bottom to top). While audio plays, rings spread from the current program and fade over its decay time.</figcaption>
+      <img src="assets/map.png" width="1800" height="1200" alt="Lucky Seven's sound map: 134 coloured dots plotted by decay time and brightness with the Large &amp; Near hall selected, and the pre-delay, decay, low cut, high cut and mix knobs below.">
+      <figcaption>The sound map. Every program sits by how long its tail lasts (left to right) and how bright it sounds (bottom to top).</figcaption>
     </figure>
   </div>
 
@@ -172,7 +172,7 @@
       <div class="features">
         <div class="feature" style="--dot: var(--amber)">
           <h3>Real M7 sound</h3>
-          <p>True-stereo convolution with Samplicity's free Bricasti M7 captures: halls, plates, rooms, chambers, ambiences and spaces. Add your own IRs too; each folder becomes a category.</p>
+          <p>True-stereo convolution with Samplicity's free Bricasti M7 captures: 134 halls, plates, rooms, chambers, ambiences and spaces.</p>
         </div>
         <div class="feature" style="--dot: var(--brick)">
           <h3>Decay control</h3>
@@ -191,8 +191,8 @@
           <p>Low and high cut knobs shape just the reverb, never your source. Pre-delay up to 250&nbsp;ms.</p>
         </div>
         <div class="feature" style="--dot: var(--rose)">
-          <h3>Built for real sessions</h3>
-          <p>A/B two settings, resize the window from 75% to 200%, and run plenty of instances: each one uses a couple of percent of a CPU core and sleeps when the input goes quiet.</p>
+          <h3>Bring your own IRs</h3>
+          <p>Any WAV, AIFF or FLAC impulse response works. Drop folders of them into the IR folder and each folder becomes its own category, placed on the map by how it actually sounds, with decay, cuts and favourites working just the same.</p>
         </div>
       </div>
     </div>
@@ -206,8 +206,8 @@
           <figcaption>The list view, searching every category at once.</figcaption>
         </figure>
         <figure class="shot">
-          <img src="assets/map-spaces.png" width="1800" height="1200" loading="lazy" alt="The sound map with Europa, a long space, selected and wide rings spreading across the map.">
-          <figcaption>Long spaces leave long, slow rings.</figcaption>
+          <img src="assets/map-spaces.png" width="1800" height="1200" loading="lazy" alt="The sound map with Europa, one of the longest spaces, selected.">
+          <figcaption>Europa, one of the longest spaces, out on the right of the map.</figcaption>
         </figure>
       </div>
     </div>
@@ -245,13 +245,14 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.
         <li>
           <div>
             <h3>Get the impulse responses</h3>
-            <p>Download the free <strong>Bricasti M7 impulse response archive</strong> from the bottom of <a href="https://www.samplicity.com/downloads/">Samplicity's downloads page</a> and unzip the whole thing into <code>~/Music/Lucky Seven/IRs</code>. Lucky Seven creates that folder the first time it opens, and finds everything inside it.</p>
+            <p>Download Samplicity's free Bricasti M7 archive, <a href="https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip"><code>Samplicity - Bricasti IRs version 2023-10.zip</code></a> (964&nbsp;MB). If that link ever stops working, it's the <strong>Bricasti M7 impulse response archive</strong> at the very bottom of <a href="https://www.samplicity.com/downloads/">Samplicity's downloads page</a>.</p>
+            <p>Unzip it and move the whole folder into <code>~/Music/Lucky Seven/IRs</code>. Lucky Seven creates that folder the first time it opens and finds everything inside it, so there's no need to sort through the files.</p>
           </div>
         </li>
         <li>
           <div>
             <h3>Rescan in your DAW</h3>
-            <p>In Ableton Live, open Settings &rarr; Plug-Ins and click Rescan. Lucky Seven appears under Audio Effects.</p>
+            <p>Rescan plug-ins in your DAW's settings, or simply restart it. Lucky Seven appears alongside your other effects.</p>
           </div>
         </li>
       </ol>
@@ -268,8 +269,8 @@ xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/Components/"Lucky Seven.
           <p>Lucky Seven is happiest at 44.1 or 48 kHz. At 88.2 or 96 kHz it uses about three times the CPU, so give it a buffer of 256 samples or more.</p>
         </div>
         <div>
-          <h3>Your own impulse responses</h3>
-          <p>Drop WAV, AIFF or FLAC files into the IR folder; each subfolder becomes a category on the map. Choose Rescan IR folder from the &middot;&middot;&middot; menu after adding files.</p>
+          <h3>Formats</h3>
+          <p>VST3 and Audio Unit, built for Apple Silicon and Intel Macs running macOS 13 or newer. After adding IRs, choose Rescan IR folder from the &middot;&middot;&middot; menu.</p>
         </div>
         <div>
           <h3>Open source</h3>

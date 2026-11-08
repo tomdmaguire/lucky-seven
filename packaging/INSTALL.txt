@@ -16,9 +16,12 @@ Installing Lucky Seven
    Alternatively, if your DAW reports the plugin as blocked, open
    System Settings > Privacy & Security and click "Allow Anyway".
 
-3. Get the impulse responses. Download the free "Bricasti M7 impulse response
-   archive" from https://www.samplicity.com/downloads/ and unzip the whole
-   archive into ~/Music/Lucky Seven/IRs (the folder is created the first time
-   the plugin opens).
+3. Get the impulse responses. Download Samplicity's free Bricasti M7 archive,
+   "Samplicity - Bricasti IRs version 2023-10.zip" (964 MB):
+   https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip
+   (If that link stops working, it's the "Bricasti M7 impulse response archive"
+   at the very bottom of https://www.samplicity.com/downloads/.)
+   Unzip it and move the whole folder into ~/Music/Lucky Seven/IRs (the folder
+   is created the first time the plugin opens).
 
-4. Rescan plugins in your DAW (in Ableton Live: Settings > Plug-Ins > Rescan).
+4. Rescan plug-ins in your DAW's settings, or restart it.

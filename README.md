@@ -36,7 +36,7 @@ Or, if your DAW reports it as blocked, open **System Settings → Privacy & Secu
 
 ## Getting the impulse responses
 
-Lucky Seven does not ship with any impulse responses. Download the free **Bricasti M7 impulse response archive** from [Samplicity's downloads page](https://www.samplicity.com/downloads/) and unzip the whole archive into:
+Lucky Seven does not ship with any impulse responses. Download Samplicity's free Bricasti M7 archive, [`Samplicity - Bricasti IRs version 2023-10.zip`](https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip) (964 MB). If that link stops working, it's the **Bricasti M7 impulse response archive** at the very bottom of [Samplicity's downloads page](https://www.samplicity.com/downloads/). Unzip it and move the whole folder into:
 
 ```
 ~/Music/Lucky Seven/IRs
