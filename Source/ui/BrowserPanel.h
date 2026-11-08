@@ -18,6 +18,9 @@ public:
     /** Folder shown in the empty-state explanation. */
     void setFolder (const juce::File& folder);
 
+    /** Progress of a Bricasti download, shown on the first-run panel. */
+    void setDownloadStatus (const IrDownloader::Status& status) { emptyState.setDownloadStatus (status); }
+
     void setItems (const std::vector<BrowserItem>& items);
     void setSelectedId (const juce::String& id);
     void setDecayRatio (float ratio);

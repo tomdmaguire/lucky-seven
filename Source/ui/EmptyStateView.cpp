@@ -6,27 +6,31 @@ namespace lucky
 
 namespace
 {
-constexpr int contentWidth = 520;
-constexpr int contentHeight = 250;
+constexpr int contentWidth = 540;
+constexpr int contentHeight = 290;
 constexpr int buttonHeight = 30;
+constexpr int primaryWidth = 300;
+constexpr int cancelWidth = 80;
 } // namespace
 
 EmptyStateView::EmptyStateView (Actions actions)
 {
-    downloadButton.onClick = [] { downloadUrl.launchInDefaultBrowser(); };
+    downloadButton.onClick = actions.download;
+    cancelButton.onClick = actions.cancelDownload;
     openButton.onClick = actions.openFolder;
     chooseButton.onClick = actions.chooseFolder;
     rescanButton.onClick = actions.rescan;
 
-    downloadButton.setTooltip (downloadUrl.toString (false) + " - the 'Bricasti M7 impulse response archive' at the bottom of the page");
+    downloadButton.setTooltip ("Downloads Samplicity's free Bricasti M7 archive and unpacks it into the IR folder");
     rescanButton.setTooltip ("Look for IRs again after adding files");
 
-    for (auto* button : { &downloadButton, &openButton, &chooseButton, &rescanButton })
+    for (auto* button : { &downloadButton, &cancelButton, &openButton, &chooseButton, &rescanButton })
     {
         button->getProperties().set ("outline", true);
         addAndMakeVisible (*button);
     }
     downloadButton.getProperties().set ("primary", true);
+    setDownloadStatus ({});
 }
 
 void EmptyStateView::setFolder (const juce::File& newFolder)
@@ -35,9 +39,31 @@ void EmptyStateView::setFolder (const juce::File& newFolder)
     repaint();
 }
 
+bool EmptyStateView::downloading() const
+{
+    return downloadStatus.stage == IrDownloader::Stage::downloading || downloadStatus.stage == IrDownloader::Stage::unpacking;
+}
+
+void EmptyStateView::setDownloadStatus (const IrDownloader::Status& status)
+{
+    downloadStatus = status;
+    downloadButton.setButtonText (status.stage == IrDownloader::Stage::failed
+                                      ? juce::String ("TRY AGAIN")
+                                      : "DOWNLOAD BRICASTI IRS (" + juce::String (IrDownloader::bricastiArchiveMegabytes) + " MB)");
+    downloadButton.setVisible (! downloading());
+    cancelButton.setVisible (downloading());
+    resized();
+    repaint();
+}
+
 juce::Rectangle<int> EmptyStateView::contentArea() const
 {
     return getLocalBounds().withSizeKeepingCentre (contentWidth, contentHeight);
+}
+
+juce::Rectangle<int> EmptyStateView::primaryArea() const
+{
+    return contentArea().withTrimmedTop (150).removeFromTop (buttonHeight);
 }
 
 void EmptyStateView::paint (juce::Graphics& g)
@@ -61,18 +87,35 @@ void EmptyStateView::paint (juce::Graphics& g)
     area.removeFromTop (6);
     g.setColour (theme::textDim);
     g.setFont (juce::FontOptions (13.0f));
-    g.drawFittedText ("Download the free Samplicity Bricasti M7 IRs and unzip the whole archive into it, "
-                      "or add your own WAV, AIFF or FLAC files - each subfolder becomes a category.",
+    g.drawFittedText ("Download Samplicity's free Bricasti M7 IRs with one click, or add your own WAV, AIFF or FLAC files: "
+                      "each subfolder becomes a category.",
                       area.removeFromTop (40), juce::Justification::centred, 3);
+
+    const auto primary = primaryArea();
+    if (downloading())
+    {
+        const auto bar = primary.withTrimmedRight (cancelWidth + 10).toFloat().withSizeKeepingCentre (static_cast<float> (primary.getWidth() - cancelWidth - 10), 8.0f);
+        g.setColour (theme::panelRaised);
+        g.fillRoundedRectangle (bar, 4.0f);
+        g.setColour (theme::accent);
+        g.fillRoundedRectangle (bar.withWidth (bar.getWidth() * juce::jlimit (0.0f, 1.0f, downloadStatus.progress)), 4.0f);
+    }
+
+    if (downloading() || downloadStatus.stage == IrDownloader::Stage::failed)
+    {
+        g.setColour (downloadStatus.stage == IrDownloader::Stage::failed ? theme::categoryColour (2) : theme::textDim);
+        g.setFont (juce::FontOptions (12.5f));
+        g.drawFittedText (downloadStatus.detail, primary.translated (0, buttonHeight + 4).withHeight (18), juce::Justification::centred, 1);
+    }
 }
 
 void EmptyStateView::resized()
 {
-    auto area = contentArea().withTrimmedTop (140);
-    downloadButton.setBounds (area.removeFromTop (buttonHeight).withSizeKeepingCentre (260, buttonHeight));
-    area.removeFromTop (12);
+    const auto primary = primaryArea();
+    downloadButton.setBounds (primary.withSizeKeepingCentre (primaryWidth, buttonHeight));
+    cancelButton.setBounds (primary.withLeft (primary.getRight() - cancelWidth));
 
-    auto row = area.removeFromTop (buttonHeight);
+    auto row = primary.translated (0, buttonHeight + 34);
     const auto widths = std::array<int, 3> { 140, 200, 100 };
     const auto gap = 10;
     auto x = row.getCentreX() - (widths[0] + widths[1] + widths[2] + gap * 2) / 2;

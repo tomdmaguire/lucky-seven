@@ -64,10 +64,12 @@ IrCatalogue::IrCatalogue() : juce::Thread ("Lucky Seven IR analysis")
 
     loadCache();
     rescan();
+    downloader.addChangeListener (this);
 }
 
 IrCatalogue::~IrCatalogue()
 {
+    downloader.removeChangeListener (this);
     stopThread (5000);
 }
 
@@ -78,6 +80,9 @@ juce::File IrCatalogue::defaultRoot()
 
 juce::File IrCatalogue::getRoot() const
 {
+    if (const auto override = juce::SystemStats::getEnvironmentVariable ("LUCKY_SEVEN_IR_ROOT_OVERRIDE", {}); override.isNotEmpty())
+        return juce::File (override);
+
     const juce::ScopedLock scope (lock);
     const auto stored = settings.getUserSettings()->getValue (rootKey.toString());
     return stored.isNotEmpty() ? juce::File (stored) : defaultRoot();
@@ -91,6 +96,17 @@ void IrCatalogue::setRoot (const juce::File& newRoot)
         settings.saveIfNeeded();
     }
     rescan();
+}
+
+void IrCatalogue::downloadBricastiIrs()
+{
+    downloader.start (IrDownloader::bricastiArchive, getRoot());
+}
+
+void IrCatalogue::changeListenerCallback (juce::ChangeBroadcaster*)
+{
+    if (downloader.getStatus().stage == IrDownloader::Stage::finished)
+        rescan();
 }
 
 float IrCatalogue::getUiScale() const

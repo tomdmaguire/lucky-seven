@@ -45,6 +45,7 @@ set(LUCKY_SEVEN_CORE_SOURCES
     Source/ir/IrAnalysis.cpp
     Source/ir/IrLibrary.cpp
     Source/ir/IrCatalogue.cpp
+    Source/ir/IrDownloader.cpp
     Source/dsp/DecayShaper.cpp
     Source/dsp/ReverbEngine.cpp
     Source/dsp/IrLoader.cpp
@@ -88,6 +89,7 @@ target_sources(LuckySevenTests PRIVATE
     Tests/IrLibraryTests.cpp
     Tests/RealLibraryTests.cpp
     Tests/ReverbEngineTests.cpp
+    Tests/IrDownloaderTests.cpp
     ${LUCKY_SEVEN_CORE_SOURCES}
 )
 

@@ -35,7 +35,9 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     : audioProcessor (p),
       browser ([this] (const juce::String& id) { audioProcessor.selectIr (id); },
                [this] (const juce::String& id) { audioProcessor.getCatalogue().toggleFavourite (id); },
-               { [this] { audioProcessor.getCatalogue().getRoot().startAsProcess(); },
+               { [this] { audioProcessor.getCatalogue().downloadBricastiIrs(); },
+                 [this] { audioProcessor.getCatalogue().getDownloader().cancel(); },
+                 [this] { audioProcessor.getCatalogue().getRoot().startAsProcess(); },
                  [this] { chooseFolder(); },
                  [this] { audioProcessor.getCatalogue().rescan(); } })
 {
@@ -155,6 +157,7 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     decay.slider.setTooltip ("Shortens the reverb tail; 100% is the original decay");
 
     audioProcessor.getCatalogue().addChangeListener (this);
+    audioProcessor.getCatalogue().getDownloader().addChangeListener (this);
     audioProcessor.getCatalogue().rescan();
     refreshItems();
 
@@ -164,6 +167,7 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
 
 LuckySevenView::~LuckySevenView()
 {
+    audioProcessor.getCatalogue().getDownloader().removeChangeListener (this);
     audioProcessor.getCatalogue().removeChangeListener (this);
     setLookAndFeel (nullptr);
 }
@@ -248,8 +252,14 @@ void LuckySevenView::showOutputMode (int mode)
     mix.slider.repaint();
 }
 
-void LuckySevenView::changeListenerCallback (juce::ChangeBroadcaster*)
+void LuckySevenView::changeListenerCallback (juce::ChangeBroadcaster* source)
 {
+    if (source == &audioProcessor.getCatalogue().getDownloader())
+    {
+        browser.setDownloadStatus (audioProcessor.getCatalogue().getDownloader().getStatus());
+        return;
+    }
+
     refreshItems();
 }
 
@@ -265,6 +275,7 @@ void LuckySevenView::refreshItems()
     }
 
     browser.setFolder (catalogue.getRoot());
+    browser.setDownloadStatus (catalogue.getDownloader().getStatus());
     browser.setItems (items);
     shownSelection = audioProcessor.getSelectedIrId();
     browser.setSelectedId (shownSelection);
@@ -366,7 +377,10 @@ void LuckySevenView::showMenu()
                        [this, preset] { if (onScaleRequested != nullptr) onScaleRequested (preset); });
     menu.addSubMenu ("Window size", sizes);
     menu.addSeparator();
-    menu.addItem ("Get the free Bricasti IRs...", [] { lucky::EmptyStateView::downloadUrl.launchInDefaultBrowser(); });
+    menu.addItem ("Download Bricasti IRs (" + juce::String (lucky::IrDownloader::bricastiArchiveMegabytes) + " MB)",
+                  ! audioProcessor.getCatalogue().getDownloader().isBusy(),
+                  false,
+                  [this] { audioProcessor.getCatalogue().downloadBricastiIrs(); });
 
     menu.showMenuAsync (juce::PopupMenu::Options().withTargetComponent (menuButton),
                         [this, root] (int result)

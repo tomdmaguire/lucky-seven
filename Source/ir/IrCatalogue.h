@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IrAnalysis.h"
+#include "IrDownloader.h"
 #include "IrLibrary.h"
 #include <juce_data_structures/juce_data_structures.h>
 #include <set>
@@ -10,7 +11,8 @@ namespace lucky
 
 /** IR library shared by all plugin instances: scans the IR folder and analyses every program in the background. */
 class IrCatalogue final : public juce::ChangeBroadcaster,
-                          private juce::Thread
+                          private juce::Thread,
+                          private juce::ChangeListener
 {
 public:
     /** Sample rate whose files are analysed for the browser. */
@@ -49,11 +51,18 @@ public:
     /** Remembers the window scale; written to disk shortly after the last change. */
     void setUiScale (float scale);
 
+    /** Shared downloader for the Bricasti archive; the catalogue rescans when it finishes. */
+    IrDownloader& getDownloader() noexcept { return downloader; }
+
+    /** Starts downloading the free Bricasti IRs into the IR folder. */
+    void downloadBricastiIrs();
+
     /** Default folder used before the user picks one. */
     static juce::File defaultRoot();
 
 private:
     void run() override;
+    void changeListenerCallback (juce::ChangeBroadcaster*) override;
     void loadCache();
     void saveCache() const;
     static juce::String cacheKey (const juce::File& file);
@@ -64,6 +73,7 @@ private:
     std::map<juce::String, DecayProfile> profiles;
     std::map<juce::String, DecayProfile> cache;
     std::set<juce::String> favourites;
+    IrDownloader downloader;
 };
 
 } // namespace lucky
