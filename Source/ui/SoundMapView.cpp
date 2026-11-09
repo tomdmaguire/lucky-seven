@@ -42,7 +42,6 @@ SoundMapView::SoundMapView (SelectionCallback callback) : onSelect (std::move (c
 {
     setComponentID ("soundMap");
     setWantsKeyboardFocus (true);
-    setMouseCursor (juce::MouseCursor::PointingHandCursor);
 }
 
 void SoundMapView::setItems (std::vector<BrowserItem> newItems)
@@ -562,6 +561,10 @@ void SoundMapView::resized()
 void SoundMapView::mouseMove (const juce::MouseEvent& event)
 {
     const auto dot = dotAt (event.position);
+    const auto overLegend = std::any_of (legendLayout.begin(), legendLayout.end(),
+                                         [&] (const LegendEntry& entry) { return entry.bounds.expanded (4.0f, 0.0f).contains (event.position); });
+    setMouseCursor (dot >= 0 || overLegend ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
+
     if (dot != hoveredDot)
     {
         hoveredDot = dot;

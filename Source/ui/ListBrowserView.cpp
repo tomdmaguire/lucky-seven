@@ -158,7 +158,6 @@ public:
     void mouseMove (const juce::MouseEvent& event) override
     {
         overHeart = heartArea().contains (event.position);
-        setMouseCursor (overHeart ? juce::MouseCursor::PointingHandCursor : juce::MouseCursor::NormalCursor);
         repaint();
     }
 

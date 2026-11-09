@@ -9,7 +9,7 @@ namespace lucky
 class HeartButton final : public juce::Button
 {
 public:
-    HeartButton() : juce::Button ("Favourite") { setMouseCursor (juce::MouseCursor::PointingHandCursor); }
+    HeartButton() : juce::Button ("Favourite") {}
 
     void paintButton (juce::Graphics& g, bool isMouseOver, bool isButtonDown) override
     {
