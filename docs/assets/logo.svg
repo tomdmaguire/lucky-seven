@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Lucky Seven">
   <rect width="64" height="64" rx="14" fill="#1b1c20"/>
-  <g fill="none" stroke="#e3a646" stroke-width="5.5" stroke-linecap="round">
+  <g fill="none" stroke="#d6b785" stroke-width="5.5" stroke-linecap="round">
     <path d="M22 14 H42"/>
     <path d="M45 17 V30"/>
     <path d="M45 35 V48"/>
