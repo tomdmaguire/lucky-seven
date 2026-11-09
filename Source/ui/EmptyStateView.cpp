@@ -87,8 +87,7 @@ void EmptyStateView::paint (juce::Graphics& g)
     area.removeFromTop (6);
     g.setColour (theme::textDim);
     g.setFont (juce::FontOptions (13.0f));
-    g.drawFittedText ("Download Samplicity's free Bricasti M7 IRs with one click, or add your own WAV, AIFF or FLAC files: "
-                      "each subfolder becomes a category.",
+    g.drawFittedText ("Download Samplicity's free Bricasti M7 IRs, or add a folder of your own.",
                       area.removeFromTop (40), juce::Justification::centred, 3);
 
     const auto primary = primaryArea();
