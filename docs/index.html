@@ -80,8 +80,8 @@
   h2 { font-family: var(--display); font-weight: 600; font-size: clamp(30px, 4vw, 40px); letter-spacing: 0.02em; margin: 6px 0 28px; text-wrap: balance; }
 
   .features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px 34px; }
-  .feature h3 { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: 0.03em; margin: 0 0 6px; display: flex; align-items: center; gap: 10px; }
-  .feature h3::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, var(--amber)); box-shadow: 0 0 0 5px color-mix(in srgb, var(--dot, var(--amber)) 18%, transparent); flex: none; }
+  .feature h3 { font-family: var(--display); font-weight: 600; font-size: 21px; letter-spacing: 0.03em; margin: 0 0 6px; display: flex; align-items: flex-start; gap: 10px; }
+  .feature h3::before { content: ""; width: 9px; height: 9px; border-radius: 50%; background: var(--dot, var(--amber)); box-shadow: 0 0 0 5px color-mix(in srgb, var(--dot, var(--amber)) 18%, transparent); flex: none; margin-top: calc((1lh - 9px) / 2); }
   .feature p { margin: 0; color: var(--dim); }
 
   .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
