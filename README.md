@@ -1,10 +1,12 @@
 # Lucky Seven
 
-A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7 impulse responses, with a decay control, a sound map for browsing programs, and quick ways to blend reverb in.
+Find the right reverb in seconds. Lucky Seven is a free true-stereo convolution reverb for macOS (VST3 and AU). It comes with 134 Bricasti M7 reverbs, works with any impulse-response library, and adds a decay control, a sound map for browsing, and quick ways to blend the reverb in.
+
+Website: https://tomdmaguire.github.io/lucky-seven/
 
 ## Features
 
-- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (Shift+←/→ jumps to the nearest shorter or longer program with a similar tone), and click legend entries to filter by category or favourites, and search to narrow it further. While audio plays, ripples spread from the current program and fade over its decay time.
+- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (Shift+←/→ jumps to the nearest shorter or longer program with a similar tone), and click legend entries to filter by category or favourites. The search box narrows it further. While audio plays, ripples spread from the current program and fade over its decay time.
 - **List view** with search across all categories, favourites, and A–Z browsing.
 - **Decay**: shortens any program's tail while keeping its frequency-dependent character (highs still die faster than lows).
 - **Pre-delay**, plus **Low Cut** (20 Hz–1 kHz) and **High Cut** (1–20 kHz) at 12 dB/oct on the reverb only.
@@ -26,17 +28,17 @@ Lucky Seven isn't signed with a paid Apple developer certificate, so macOS won't
 
 A zip for installing by hand is also on the [releases page](https://github.com/tomdmaguire/lucky-seven/releases/latest); its `INSTALL.txt` explains the steps.
 
-## Getting the impulse responses
+## The Bricasti M7 set
 
-Lucky Seven does not ship with any impulse responses. The first time you open it, click **Download Bricasti IRs**: it fetches Samplicity's free archive and sets everything up. To do it by hand instead, download Samplicity's free Bricasti M7 archive, [`Samplicity - Bricasti IRs version 2023-10.zip`](https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip) (964 MB). If that link stops working, it's the **Bricasti M7 impulse response archive** at the very bottom of [Samplicity's downloads page](https://www.samplicity.com/downloads/). Unzip it and move the whole folder into:
+The first time you open Lucky Seven, click **Download Bricasti IRs**. It fetches Samplicity's free captures of the Bricasti M7 (134 programs) straight from Samplicity and sets everything up. To do it by hand instead, download Samplicity's free Bricasti M7 archive, [`Samplicity - Bricasti IRs version 2023-10.zip`](https://cdn.samplicity.com/downloads/Samplicity%20-%20Bricasti%20IRs%20version%202023-10.zip) (964 MB). If that link stops working, it's the **Bricasti M7 impulse response archive** at the very bottom of [Samplicity's downloads page](https://www.samplicity.com/downloads/). Unzip it and move the whole folder into:
 
 ```
 ~/Music/Lucky Seven/IRs
 ```
 
-The folder is created the first time the plugin opens. To use a different folder, open the **⋯** menu at the top right and choose **Choose IR folder...**. After adding files, choose **Rescan IR folder** from the same menu or reopen the plugin window.
+The folder is created the first time the plugin opens. To add more folders, open the **⋯** menu at the top right and choose **IR folders → Add a folder...**. After adding files, choose **IR folders → Rescan all folders** or reopen the plugin window.
 
-The Samplicity IRs are offered free of charge and as-is. Please don't redistribute them, and don't bundle them with this plugin or any other product.
+The Samplicity IRs are free and offered as-is. They're downloaded from Samplicity rather than bundled, so please don't redistribute them with this plugin or any other product.
 
 ## Building
 
@@ -49,7 +51,7 @@ cmake --build build
 
 JUCE is fetched automatically by CMake. The build copies the VST3 and AU into your plug-in folders. A standalone app is built alongside them for quick testing.
 
-Pushing a tag such as `v1.0.1` builds, tests and publishes a release zip through GitHub Actions.
+Pushing a tag such as `v1.2.0` builds, tests and publishes the installer (`Lucky-Seven.pkg`) and a zip through GitHub Actions.
 
 ### Tests and tools
 
@@ -57,13 +59,15 @@ Pushing a tag such as `v1.0.1` builds, tests and publishes a release zip through
 ctest --test-dir build                                    # unit tests
 LUCKY_SEVEN_IR_ROOT="$HOME/Music/Lucky Seven/IRs" \
   build/LuckySevenTests_artefacts/Release/LuckySevenTests  # also checks the real Bricasti library
-build/LuckySevenBench_artefacts/Release/LuckySevenBench <ir.wav> [decay ratio] [block size]
+build/LuckySevenBench_artefacts/Release/LuckySevenBench <ir.wav> [decay ratio] [block size] [host rate]
 build/LuckySevenProbe_artefacts/Release/LuckySevenProbe <plugin.vst3> <parameter name>
-build/LuckySevenSnapshot <out.png> [list|active|timing|150%]  # render the UI to an image
+build/LuckySevenProbe_artefacts/Release/LuckySevenProbe <plugin.vst3> --timing [block size]
+build/LuckySevenSnapshot <out.png> [list|active|timing|search:<text>|mapsearch:<text>|hover:<id>|150%]
 build/LuckySevenSnapshot --check-state                        # A/B and save/restore check
+build/LuckySevenSnapshot --check-keys                         # keyboard navigation check
 ```
 
-`LuckySevenBench` measures CPU cost per instance. `LuckySevenProbe` hosts any VST3 and measures how its mix knob sets dry and wet levels.
+`LuckySevenBench` measures CPU cost per instance. `LuckySevenProbe` hosts any VST3 and measures how its mix knob sets dry and wet levels, or with `--timing` its per-block CPU cost.
 
 ## Licence
 
