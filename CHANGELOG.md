@@ -1,9 +1,12 @@
 # Changelog
 
-## v1.1.1
+## v1.1.2
 
 - Much smoother CPU use at small buffer sizes: the long reverb tail is now computed on a background thread, so no single audio block carries a burst of work. At 48 kHz with a 64-sample buffer the heaviest blocks drop from over 100% of the available time to around 5%, whatever the IR length. The sound is unchanged and no latency is added.
 - Hovering a dot on the map shows its details instantly, with the keyboard hint set apart.
+- The map uses more of the window, with less empty space above and below it.
+
+(v1.1.1 was tagged but never released.)
 
 ## v1.1.0
 
