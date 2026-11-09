@@ -88,6 +88,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
     if (getTotalNumInputChannels() == 1 && buffer.getNumChannels() > 1)
         buffer.copyFrom (1, 0, buffer, 0, 0, buffer.getNumSamples());
 
+    engine.setNonRealtime (isNonRealtime());
     engine.setPredelayMs (predelayMs->load());
     const auto mode = juce::roundToInt (outputMode->load());
     if (mode == 1)

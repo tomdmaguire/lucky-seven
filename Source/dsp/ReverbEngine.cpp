@@ -21,16 +21,40 @@ constexpr float openLowCutHz = ReverbEngine::minCutHz + 0.5f;
 constexpr float openHighCutHz = ReverbEngine::maxCutHz - 1.0f;
 } // namespace
 
+ReverbEngine::TailWorker::TailWorker (std::array<TailConvolver, 2>& tailsToServe)
+    : juce::Thread ("Lucky Seven reverb tail"), tails (tailsToServe)
+{
+}
+
+void ReverbEngine::TailWorker::run()
+{
+    while (! threadShouldExit())
+    {
+        for (auto& tail : tails)
+            tail.processPending();
+        wait (2);
+    }
+}
+
 ReverbEngine::ReverbEngine (int headSize)
     : fromLeft (juce::dsp::Convolution::NonUniform { headSize }, queue),
       fromRight (juce::dsp::Convolution::NonUniform { headSize }, queue)
 {
 }
 
+ReverbEngine::~ReverbEngine()
+{
+    worker.stopThread (2000);
+}
+
 void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
 {
+    worker.stopThread (2000);
     currentSampleRate = sampleRate;
     capacity = std::max (maximumBlockSize, 1);
+
+    for (auto& tail : tails)
+        tail.prepare (capacity);
 
     const juce::dsp::ProcessSpec stereoSpec { sampleRate, static_cast<juce::uint32> (capacity), 2 };
     fromLeft.prepare (stereoSpec);
@@ -56,7 +80,9 @@ void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
     leftBus.setSize (2, capacity);
     rightBus.setSize (2, capacity);
     dryBus.setSize (2, capacity);
+    tailInput.setSize (2, capacity);
     reset();
+    worker.startThread (juce::Thread::Priority::high);
 }
 
 void ReverbEngine::reset()
@@ -72,6 +98,9 @@ void ReverbEngine::reset()
 
     lowCut.reset();
     highCut.reset();
+
+    for (auto& tail : tails)
+        tail.reset();
 
     silentSamples = 0;
 }
@@ -122,11 +151,47 @@ void ReverbEngine::filterWet (juce::dsp::AudioBlock<float> wet)
 
 void ReverbEngine::loadIr (TrueStereoIr&& ir)
 {
-    const auto rate = ir.sampleRate;
-    fromLeft.loadImpulseResponse (std::move (ir.fromLeft), rate, juce::dsp::Convolution::Stereo::yes,
+    const auto hostRate = currentSampleRate;
+    const auto resample = [&] (const juce::AudioBuffer<float>& source)
+    {
+        if (juce::approximatelyEqual (ir.sampleRate, hostRate) || source.getNumSamples() == 0)
+            return source;
+
+        const auto ratio = ir.sampleRate / hostRate;
+        const auto length = static_cast<int> (std::ceil (source.getNumSamples() / ratio));
+        juce::AudioBuffer<float> resampled (source.getNumChannels(), length);
+        for (int ch = 0; ch < source.getNumChannels(); ++ch)
+        {
+            juce::WindowedSincInterpolator interpolator;
+            interpolator.process (ratio, source.getReadPointer (ch), resampled.getWritePointer (ch), length,
+                                  source.getNumSamples(), 0);
+        }
+        resampled.applyGain (static_cast<float> (ratio));
+        return resampled;
+    };
+
+    const auto install = [&] (juce::dsp::Convolution& head, TailConvolver& tail, const juce::AudioBuffer<float>& source)
+    {
+        const auto full = resample (source);
+        const auto headLength = std::min (full.getNumSamples(), TailConvolver::headLength);
+        juce::AudioBuffer<float> headPart (2, std::max (headLength, 1));
+        headPart.clear();
+        for (int ch = 0; ch < std::min (2, full.getNumChannels()); ++ch)
+            headPart.copyFrom (ch, 0, full, ch, 0, headLength);
+
+        const auto tailLength = std::max (0, full.getNumSamples() - TailConvolver::headLength);
+        juce::AudioBuffer<float> tailPart (2, tailLength);
+        for (int ch = 0; ch < std::min (2, full.getNumChannels()); ++ch)
+            if (tailLength > 0)
+                tailPart.copyFrom (ch, 0, full, ch, TailConvolver::headLength, tailLength);
+
+        tail.setTail (tailPart);
+        head.loadImpulseResponse (std::move (headPart), hostRate, juce::dsp::Convolution::Stereo::yes,
                                   juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::no);
-    fromRight.loadImpulseResponse (std::move (ir.fromRight), rate, juce::dsp::Convolution::Stereo::yes,
-                                   juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::no);
+    };
+
+    install (fromLeft, tails[0], ir.fromLeft);
+    install (fromRight, tails[1], ir.fromRight);
 }
 
 bool ReverbEngine::isIdle (const juce::AudioBuffer<float>& buffer)
@@ -194,10 +259,17 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
         rightL[i] = rightR[i] = predelay.popSample (1);
     }
 
+    tailInput.copyFrom (0, 0, leftBus, 0, 0, length);
+    tailInput.copyFrom (1, 0, rightBus, 0, 0, length);
+
     auto leftBlock = juce::dsp::AudioBlock<float> (leftBus).getSubBlock (0, static_cast<size_t> (length));
     auto rightBlock = juce::dsp::AudioBlock<float> (rightBus).getSubBlock (0, static_cast<size_t> (length));
     fromLeft.process (juce::dsp::ProcessContextReplacing<float> (leftBlock));
     fromRight.process (juce::dsp::ProcessContextReplacing<float> (rightBlock));
+
+    const auto realtime = ! nonRealtime.load();
+    tails[0].process (tailInput.getReadPointer (0), leftBus.getWritePointer (0), leftBus.getWritePointer (1), length, realtime);
+    tails[1].process (tailInput.getReadPointer (1), rightBus.getWritePointer (0), rightBus.getWritePointer (1), length, realtime);
 
     if (numChannels == 2)
     {

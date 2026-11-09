@@ -67,6 +67,9 @@ public:
             testTailAndIdle (rate, label);
             testPredelay (rate, label);
 
+            beginTest ("head plus background tail nulls against one full convolution" + label);
+            expectLessThan (nullAgainstFullConvolution (rate), -100.0f);
+
             beginTest ("dry passes at exactly unity with the reverb at -inf" + label);
             expectLessThan (dryError (rate, 1.0f, 0.0f, 1.0f), 1.0e-6f);
 
@@ -150,6 +153,88 @@ private:
         }
 
         expectWithinAbsoluteError (peakIndex, expectedDelay, 1);
+    }
+
+    /** Renders noise through the engine (64-sample blocks, background tail running) and through a single full-length
+        JUCE convolution per side, returning the peak difference relative to the reference peak, in dB. */
+    float nullAgainstFullConvolution (double rate)
+    {
+        const auto irLength = static_cast<int> (rate * 0.6);
+        const auto inputLength = static_cast<int> (rate * 1.0);
+        const auto ir = makeDecayingIr (rate, irLength);
+
+        juce::AudioBuffer<float> input (2, inputLength);
+        juce::Random random (5);
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < inputLength; ++i)
+                input.setSample (ch, i, random.nextFloat() - 0.5f);
+
+        lucky::ReverbEngine engine;
+        engine.prepare (rate, 64);
+        engine.setOutputGains (0.0f, 1.0f);
+        engine.reset();
+        auto engineIr = ir;
+        engine.loadIr (std::move (engineIr));
+        waitForIr (engine, irLength);
+        engine.reset();
+
+        juce::AudioBuffer<float> rendered (input);
+        juce::AudioBuffer<float> block (2, 64);
+        for (int start = 0; start < inputLength; start += 64)
+        {
+            const auto count = std::min (64, inputLength - start);
+            block.setSize (2, count, false, false, true);
+            for (int ch = 0; ch < 2; ++ch)
+                block.copyFrom (ch, 0, input, ch, start, count);
+            engine.process (block);
+            for (int ch = 0; ch < 2; ++ch)
+                rendered.copyFrom (ch, start, block, ch, 0, count);
+            if ((start / 64) % 8 == 0)
+                juce::Thread::sleep (1);
+        }
+        expectEquals (engine.getTailUnderflowCount(), static_cast<juce::int64> (0));
+
+        juce::AudioBuffer<float> expected (2, inputLength);
+        expected.clear();
+        const std::array<const juce::AudioBuffer<float>*, 2> sides { &ir.fromLeft, &ir.fromRight };
+        for (int side = 0; side < 2; ++side)
+        {
+            juce::dsp::Convolution full;
+            full.prepare ({ rate, static_cast<juce::uint32> (inputLength), 2 });
+            auto copy = *sides[static_cast<size_t> (side)];
+            full.loadImpulseResponse (std::move (copy), rate, juce::dsp::Convolution::Stereo::yes,
+                                      juce::dsp::Convolution::Trim::no, juce::dsp::Convolution::Normalise::no);
+
+            juce::AudioBuffer<float> probe (2, 64);
+            for (int attempt = 0; attempt < 2000 && full.getCurrentIRSize() != irLength; ++attempt)
+            {
+                probe.clear();
+                auto probeBlock = juce::dsp::AudioBlock<float> (probe);
+                full.process (juce::dsp::ProcessContextReplacing<float> (probeBlock));
+                juce::Thread::sleep (1);
+            }
+            full.reset();
+
+            juce::AudioBuffer<float> sideInput (2, inputLength);
+            sideInput.copyFrom (0, 0, input, side, 0, inputLength);
+            sideInput.copyFrom (1, 0, input, side, 0, inputLength);
+            auto sideBlock = juce::dsp::AudioBlock<float> (sideInput);
+            full.process (juce::dsp::ProcessContextReplacing<float> (sideBlock));
+            for (int ch = 0; ch < 2; ++ch)
+                expected.addFrom (ch, 0, sideInput, ch, 0, inputLength);
+        }
+
+        auto peak = 0.0f, difference = 0.0f;
+        for (int ch = 0; ch < 2; ++ch)
+            for (int i = 0; i < inputLength; ++i)
+            {
+                peak = std::max (peak, std::abs (expected.getSample (ch, i)));
+                difference = std::max (difference, std::abs (expected.getSample (ch, i) - rendered.getSample (ch, i)));
+            }
+
+        const auto db = juce::Decibels::gainToDecibels (difference / std::max (peak, 1.0e-9f), -200.0f);
+        logMessage ("null depth at " + juce::String (rate) + " Hz: " + juce::String (db, 1) + " dB");
+        return db;
     }
 
     /** Largest difference between output and input * expectedDryGain with the given output gains and no IR loaded. */
