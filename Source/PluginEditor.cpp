@@ -513,7 +513,7 @@ void LuckySevenView::resized()
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
     const auto knobSlot = strip.getWidth() / 6;
-    for (auto* knob : { &predelay, &decay, &lowCut, &highCut, &width, &mix })
+    for (auto* knob : { &predelay, &decay, &width, &lowCut, &highCut, &mix })
     {
         auto slot = strip.removeFromLeft (knobSlot);
         knob->label.setBounds (slot.removeFromTop (18));
