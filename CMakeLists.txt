@@ -49,6 +49,7 @@ set(LUCKY_SEVEN_CORE_SOURCES
     Source/dsp/DecayShaper.cpp
     Source/dsp/ReverbEngine.cpp
     Source/dsp/IrLoader.cpp
+    Source/dsp/TailConvolver.cpp
 )
 
 target_sources(LuckySeven PRIVATE
@@ -90,6 +91,7 @@ target_sources(LuckySevenTests PRIVATE
     Tests/RealLibraryTests.cpp
     Tests/ReverbEngineTests.cpp
     Tests/IrDownloaderTests.cpp
+    Tests/TailConvolverTests.cpp
     ${LUCKY_SEVEN_CORE_SOURCES}
 )
 
