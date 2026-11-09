@@ -187,8 +187,8 @@ int main (int argc, char** argv)
 {
     if (argc < 2)
     {
-        std::cerr << "usage: LuckySevenSnapshot <out.png> [list|active|timing|150%]\n"
-                     "       LuckySevenSnapshot --check-state\n";
+        std::cerr << "usage: LuckySevenSnapshot <out.png> [list|active|timing|search:<text>|mapsearch:<text>|hover:<id>|150%]\n"
+                     "       LuckySevenSnapshot --check-state | --check-keys\n";
         return 1;
     }
 
