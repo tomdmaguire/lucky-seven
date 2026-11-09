@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- New Width knob: narrows the reverb from its natural stereo image down to mono, leaving the dry signal untouched.
+- Simpler wording on the screen shown when no IRs are found.
+
 ## v1.1.2
 
 - Much smoother CPU use at small buffer sizes: the long reverb tail is now computed on a background thread, so no single audio block carries a burst of work. At 48 kHz with a 64-sample buffer the heaviest blocks drop from over 100% of the available time to around 5%, whatever the IR length. The sound is unchanged and no latency is added.

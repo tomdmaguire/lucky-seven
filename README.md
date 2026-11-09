@@ -10,6 +10,7 @@ Website: https://tomdmaguire.github.io/lucky-seven/
 - **List view** with search across all categories, favourites, and A–Z browsing.
 - **Decay**: shortens any program's tail while keeping its frequency-dependent character (highs still die faster than lows).
 - **Pre-delay**, plus **Low Cut** (20 Hz–1 kHz) and **High Cut** (1–20 kHz) at 12 dB/oct on the reverb only.
+- **Width**: narrows the reverb from the IR's natural stereo image down to mono, so it can sit behind its source instead of spreading across the mix. The dry signal is untouched.
 - **Output modes**:
   - **Mix**: dry/wet balance that keeps the dry signal near full level until the top of the knob.
   - **Blend**: dry stays at 0 dB and the knob sets the reverb level in dB, like a dry chain plus a 100% wet reverb in an Ableton rack.
