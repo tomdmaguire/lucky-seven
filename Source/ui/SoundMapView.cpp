@@ -175,7 +175,7 @@ juce::Rectangle<float> SoundMapView::plotArea() const
     area.removeFromBottom (legendHeight);
     area.removeFromBottom (axisMargin * 0.6f);
     area.removeFromLeft (axisMargin);
-    return area.reduced (18.0f, 30.0f);
+    return area.reduced (18.0f, 0.0f).withTrimmedTop (14.0f).withTrimmedBottom (8.0f);
 }
 
 void SoundMapView::AxisScale::build (std::vector<float> logValues)
