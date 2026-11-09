@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.2.0
 
 - New Width knob: narrows the reverb from its natural stereo image down to mono, leaving the dry signal untouched.
 - Simpler wording on the screen shown when no IRs are found.
