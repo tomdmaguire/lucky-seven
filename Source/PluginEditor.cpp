@@ -123,6 +123,7 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     setupKnob (decay, LuckySevenProcessor::decayId, "DECAY");
     setupKnob (lowCut, LuckySevenProcessor::lowCutId, "LOW CUT");
     setupKnob (highCut, LuckySevenProcessor::highCutId, "HIGH CUT");
+    setupKnob (width, LuckySevenProcessor::widthId, "WIDTH");
     setupKnob (mix, LuckySevenProcessor::mixId, "MIX");
     setupRangeLabels (lowCut, "20 Hz", "1 kHz");
     setupRangeLabels (highCut, "1 kHz", "20 kHz");
@@ -133,6 +134,8 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     highCut.slider.getProperties().set ("cut", "high");
     lowCut.slider.setTooltip ("Low cut on the reverb only, 12 dB/oct");
     highCut.slider.setTooltip ("High cut on the reverb only, 12 dB/oct");
+    width.slider.textFromValueFunction = [] (double percent) { return percent < 0.5 ? juce::String ("MONO") : juce::String (juce::roundToInt (percent)) + "%"; };
+    width.slider.setTooltip ("Stereo width of the reverb only, from mono to the IR's own width");
 
     predelay.slider.textFromValueFunction = [] (double ms) { return juce::String (juce::roundToInt (ms)) + " ms"; };
     mix.label.setVisible (false);
@@ -304,7 +307,7 @@ void LuckySevenView::applyAccent()
     accent = item != nullptr ? lucky::theme::categoryColour (item->entry.categoryIndex) : lucky::theme::accent;
 
     for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &lowCut.slider, &highCut.slider,
-                                                                     &mix.slider, &mapTab, &listTab })
+                                                                     &width.slider, &mix.slider, &mapTab, &listTab })
     {
         component->setColour (juce::Slider::rotarySliderFillColourId, accent);
         component->repaint();
@@ -509,8 +512,8 @@ void LuckySevenView::resized()
         button.setBounds (slotArea.removeFromLeft (32));
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
-    const auto knobSlot = strip.getWidth() / 5;
-    for (auto* knob : { &predelay, &decay, &lowCut, &highCut, &mix })
+    const auto knobSlot = strip.getWidth() / 6;
+    for (auto* knob : { &predelay, &decay, &lowCut, &highCut, &width, &mix })
     {
         auto slot = strip.removeFromLeft (knobSlot);
         knob->label.setBounds (slot.removeFromTop (18));

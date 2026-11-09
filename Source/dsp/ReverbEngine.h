@@ -38,6 +38,9 @@ public:
     /** Sets the 12 dB/oct low and high cut applied to the reverb signal only. */
     void setWetFilter (float lowCutHz, float highCutHz);
 
+    /** Sets the stereo width of the reverb signal only, from 0 (mono) to 1 (the IR's own width); changes are smoothed. */
+    void setWidth (float width);
+
     /** Hands a new impulse response to the convolvers; call from a single non-audio thread. */
     void loadIr (TrueStereoIr&& ir);
 
@@ -62,6 +65,7 @@ public:
 private:
     void processChunk (juce::AudioBuffer<float>& buffer, int start, int length);
     void filterWet (juce::dsp::AudioBlock<float> wet);
+    void narrowWet (juce::AudioBuffer<float>& buffer, int start, int length);
     bool isIdle (const juce::AudioBuffer<float>& buffer);
     void applyOutputGains (juce::AudioBuffer<float>& buffer, int start, int length, int numChannels);
 
@@ -83,6 +87,7 @@ private:
     juce::dsp::DelayLine<float, juce::dsp::DelayLineInterpolationTypes::Linear> predelay;
     juce::SmoothedValue<float> dryGain { 1.0f }, wetGain { 0.0f };
     juce::SmoothedValue<float> predelaySamples;
+    juce::SmoothedValue<float> width { 1.0f };
     Filter lowCut, highCut;
     juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> lowCutHz { minCutHz }, highCutHz { maxCutHz };
     juce::AudioBuffer<float> leftBus, rightBus, dryBus, tailInput;

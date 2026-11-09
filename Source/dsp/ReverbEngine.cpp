@@ -66,6 +66,7 @@ void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
     predelaySamples.reset (sampleRate, predelaySmoothingSeconds);
     dryGain.reset (sampleRate, gainSmoothingSeconds);
     wetGain.reset (sampleRate, gainSmoothingSeconds);
+    width.reset (sampleRate, gainSmoothingSeconds);
     lowCutHz.reset (sampleRate, filterSmoothingSeconds);
     highCutHz.reset (sampleRate, filterSmoothingSeconds);
 
@@ -93,6 +94,7 @@ void ReverbEngine::reset()
     dryGain.setCurrentAndTargetValue (dryGain.getTargetValue());
     wetGain.setCurrentAndTargetValue (wetGain.getTargetValue());
     predelaySamples.setCurrentAndTargetValue (predelaySamples.getTargetValue());
+    width.setCurrentAndTargetValue (width.getTargetValue());
     lowCutHz.setCurrentAndTargetValue (lowCutHz.getTargetValue());
     highCutHz.setCurrentAndTargetValue (highCutHz.getTargetValue());
 
@@ -122,6 +124,27 @@ void ReverbEngine::setWetFilter (float lowCutFrequency, float highCutFrequency)
     const auto nyquistLimit = static_cast<float> (currentSampleRate * 0.45);
     lowCutHz.setTargetValue (juce::jlimit (minCutHz, maxCutHz, lowCutFrequency));
     highCutHz.setTargetValue (juce::jlimit (minCutHz, std::min (maxCutHz, nyquistLimit), highCutFrequency));
+}
+
+void ReverbEngine::setWidth (float newWidth)
+{
+    width.setTargetValue (juce::jlimit (0.0f, 1.0f, newWidth));
+}
+
+void ReverbEngine::narrowWet (juce::AudioBuffer<float>& buffer, int start, int length)
+{
+    if (! width.isSmoothing() && width.getTargetValue() >= 1.0f)
+        return;
+
+    auto* left = buffer.getWritePointer (0, start);
+    auto* right = buffer.getWritePointer (1, start);
+    for (int i = 0; i < length; ++i)
+    {
+        const auto mid = 0.5f * (left[i] + right[i]);
+        const auto side = 0.5f * (left[i] - right[i]) * width.getNextValue();
+        left[i] = mid + side;
+        right[i] = mid - side;
+    }
 }
 
 void ReverbEngine::filterWet (juce::dsp::AudioBlock<float> wet)
@@ -289,6 +312,8 @@ void ReverbEngine::processChunk (juce::AudioBuffer<float>& buffer, int start, in
     }
 
     filterWet (ioBlock);
+    if (numChannels == 2)
+        narrowWet (buffer, start, length);
 
     auto blockWetPeak = 0.0f;
     for (int ch = 0; ch < numChannels; ++ch)

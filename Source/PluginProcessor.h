@@ -17,6 +17,7 @@ public:
     static constexpr float blendSilentDb = -60.0f;
     static inline const juce::String lowCutId { "lowCut" };
     static inline const juce::String highCutId { "highCut" };
+    static inline const juce::String widthId { "width" };
     static constexpr float lowCutMaxHz = 1000.0f;
     static constexpr float highCutMinHz = 1000.0f;
     static inline const juce::Identifier irIdProperty { "irId" };
@@ -91,6 +92,7 @@ private:
     std::atomic<float>* outputMode = nullptr;
     std::atomic<float>* lowCutHz = nullptr;
     std::atomic<float>* highCutHz = nullptr;
+    std::atomic<float>* widthPercent = nullptr;
     double hostSampleRate = 48000.0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenProcessor)

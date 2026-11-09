@@ -18,6 +18,7 @@ LuckySevenProcessor::LuckySevenProcessor()
     outputMode = parameters.getRawParameterValue (outputModeId);
     lowCutHz = parameters.getRawParameterValue (lowCutId);
     highCutHz = parameters.getRawParameterValue (highCutId);
+    widthPercent = parameters.getRawParameterValue (widthId);
     loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId));
     selectIr (defaultIrId);
 }
@@ -58,6 +59,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { highCutId, 2 }, "High Cut",
                                                      logRange (highCutMinHz, lucky::ReverbEngine::maxCutHz),
                                                      lucky::ReverbEngine::maxCutHz, hertzLabel),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { widthId, 3 }, "Width",
+                                                     Range (0.0f, 100.0f, 0.1f), 100.0f, percentLabel),
     };
 }
 
@@ -106,6 +109,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         engine.setOutputGains (std::sqrt (std::max (0.0f, 1.0f - wet * wet)), wet);
     }
     engine.setWetFilter (lowCutHz->load(), highCutHz->load());
+    engine.setWidth (widthPercent->load() / 100.0f);
     engine.process (buffer);
 }
 

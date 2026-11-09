@@ -66,6 +66,7 @@ public:
             const auto label = " at " + juce::String (rate / 1000.0, 1) + " kHz";
             testTailAndIdle (rate, label);
             testPredelay (rate, label);
+            testWidth (rate, label);
 
             beginTest ("head plus background tail nulls against one full convolution" + label);
             expectLessThan (nullAgainstFullConvolution (rate), -100.0f);
@@ -155,6 +156,40 @@ private:
         }
 
         expectWithinAbsoluteError (peakIndex, expectedDelay, 1);
+    }
+
+    void testWidth (double rate, const juce::String& label)
+    {
+        beginTest ("width scales the reverb's side signal and leaves its mid alone" + label);
+        lucky::ReverbEngine engine;
+        engine.setNonRealtime (true);
+        engine.prepare (rate, blockSize);
+        engine.setOutputGains (0.0f, 1.0f);
+        engine.loadIr (makeUnitImpulse (rate));
+        waitForIr (engine, 64);
+
+        for (const auto [amount, expectedLeft, expectedRight] : { std::tuple { 1.0f, 1.0f, 0.0f },
+                                                                  std::tuple { 0.5f, 0.75f, 0.25f },
+                                                                  std::tuple { 0.0f, 0.5f, 0.5f } })
+        {
+            engine.setWidth (amount);
+            engine.reset();
+
+            juce::AudioBuffer<float> block (2, blockSize);
+            block.clear();
+            for (int i = 0; i < blockSize; ++i)
+                block.setSample (0, i, 0.5f * std::sin (0.05f * static_cast<float> (i)));
+            const auto input = block;
+            engine.process (block);
+
+            auto worst = 0.0f;
+            for (int i = 0; i < blockSize; ++i)
+            {
+                worst = std::max (worst, std::abs (block.getSample (0, i) - expectedLeft * input.getSample (0, i)));
+                worst = std::max (worst, std::abs (block.getSample (1, i) - expectedRight * input.getSample (0, i)));
+            }
+            expectLessThan (worst, 1.0e-5f, "width " + juce::String (amount));
+        }
     }
 
     /** Renders noise through the engine (64-sample blocks paced at roughly real time, background tail running) and through a single full-length
