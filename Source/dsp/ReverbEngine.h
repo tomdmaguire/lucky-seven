@@ -44,8 +44,11 @@ public:
     /** Highest input and reverb peaks since the last call, then resets them; safe to call from the UI thread. */
     std::pair<float, float> takePeaks() noexcept { return { inputPeak.exchange (0.0f), wetPeak.exchange (0.0f) }; }
 
-    /** Length in samples of the IR currently in use (head plus tail), or 0 or 1 before one has loaded. */
-    int getCurrentIrSize() const { return fromLeft.getCurrentIRSize() + tails[0].getTailLength(); }
+    /** Length in samples of the IR in use on both stereo sides (head plus tail), or 0 or 1 before one has loaded. */
+    int getCurrentIrSize() const
+    {
+        return std::min (fromLeft.getCurrentIRSize() + tails[0].getTailLength(), fromRight.getCurrentIRSize() + tails[1].getTailLength());
+    }
 
     /** Tells the engine whether the host is rendering offline, where the tail is computed inline for exact results. */
     void setNonRealtime (bool isNonRealtime) noexcept { nonRealtime = isNonRealtime; }
