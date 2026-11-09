@@ -83,6 +83,7 @@ private:
     {
         const auto irLength = static_cast<int> (rate / 2.0);
         lucky::ReverbEngine engine;
+        engine.setNonRealtime (true);
         engine.prepare (rate, blockSize);
         engine.setOutputGains (0.0f, 1.0f);
         engine.loadIr (makeDecayingIr (rate, irLength));
@@ -120,6 +121,7 @@ private:
     {
         beginTest ("100 ms pre-delay lands on the right sample" + label);
         lucky::ReverbEngine engine;
+        engine.setNonRealtime (true);
         engine.prepare (rate, blockSize);
         engine.setOutputGains (0.0f, 1.0f);
         engine.setPredelayMs (100.0f);
@@ -155,7 +157,7 @@ private:
         expectWithinAbsoluteError (peakIndex, expectedDelay, 1);
     }
 
-    /** Renders noise through the engine (64-sample blocks, background tail running) and through a single full-length
+    /** Renders noise through the engine (64-sample blocks paced at roughly real time, background tail running) and through a single full-length
         JUCE convolution per side, returning the peak difference relative to the reference peak, in dB. */
     float nullAgainstFullConvolution (double rate)
     {
@@ -189,8 +191,7 @@ private:
             engine.process (block);
             for (int ch = 0; ch < 2; ++ch)
                 rendered.copyFrom (ch, start, block, ch, 0, count);
-            if ((start / 64) % 8 == 0)
-                juce::Thread::sleep (1);
+            juce::Thread::sleep (juce::roundToInt (1000.0 * 64.0 / rate));
         }
         expectEquals (engine.getTailUnderflowCount(), static_cast<juce::int64> (0));
 
