@@ -14,7 +14,7 @@ inline const juce::Colour outline { 0xff34363d };
 inline const juce::Colour grid { 0xff26282e };
 inline const juce::Colour text { 0xffe6e6e8 };
 inline const juce::Colour textDim { 0xff83858e };
-inline const juce::Colour accent { 0xffe3a646 };
+inline const juce::Colour accent { 0xffd6b785 };
 
 /** Pseudo-category index used for the favourites filter and list entry. */
 inline constexpr int favouritesCategory = 0;
@@ -32,8 +32,8 @@ inline juce::Colour categoryColour (int categoryIndex)
     }
 
     static const juce::Colour colours[] {
-        juce::Colour (0xffe3a646), juce::Colour (0xffd9714f), juce::Colour (0xffa9c286),
-        juce::Colour (0xff7cb4bb), juce::Colour (0xffefe0bf), juce::Colour (0xffc58aa0),
+        juce::Colour (0xffd6b785), juce::Colour (0xffd685be), juce::Colour (0xff85d68f),
+        juce::Colour (0xff85d6d6), juce::Colour (0xff85aad6), juce::Colour (0xffa785d6),
     };
     return colours[static_cast<size_t> (juce::jlimit (1, 6, categoryIndex) - 1)];
 }

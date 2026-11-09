@@ -11,7 +11,7 @@ JUCE 9 (CMake + Ninja, fetched via FetchContent) VST3 + Standalone convolution r
 - `Source/ir/IrAnalysis.*`: per-octave T60 (Schroeder, T30 with T20 fallback), mid T60, brightness (energy-weighted log frequency after 50 ms), onset.
 - `Source/ir/IrLibrary.*`: scanning. Samplicity quad names map to categories 1-6 and merge 44.1/48 kHz variants; L/R split files are skipped. Other WAV/AIFF/FLAC files get their category from the first subfolder (index >= 100, "User" for loose files). Quad channel order is LL, LR, RL, RR.
 - `Source/ir/IrCatalogue.*`: SharedResourcePointer shared by all instances. Holds the scan, background analysis with a JSON cache (`~/Library/Application Support/Lucky Seven/analysis.json`), global settings (IR root, favourites) in `Lucky Seven.settings`. The default root is `~/Music/Lucky Seven/IRs`, created automatically.
-- `Source/ui/`: `SoundMapView` (rank-blended log axes, relaxation layout, legend filters incl. favourites), `ListBrowserView` (search, All results, Favourites, heart column), `BrowserPanel`, `EmptyStateView` (first run), `HeartButton`, `LookAndFeel`, `Theme` (Walnut Lifted category palette).
+- `Source/ui/`: `SoundMapView` (rank-blended log axes, relaxation layout, legend filters incl. favourites), `ListBrowserView` (search, All results, Favourites, heart column), `BrowserPanel`, `EmptyStateView` (first run), `HeartButton`, `LookAndFeel`, `Theme` (pastel category palette: equal saturation and brightness, hues spread round the wheel).
 - `Tests/`: juce::UnitTest via CTest. `RealLibraryTests` run only when `LUCKY_SEVEN_IR_ROOT` is set.
 - `tools/Benchmark.cpp` (CPU per instance), `tools/PluginProbe.cpp` (measure any plugin's mix law).
 
