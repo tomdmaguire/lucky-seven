@@ -1,5 +1,6 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <iostream>
+#include <numeric>
 
 namespace
 {
@@ -91,6 +92,53 @@ int main (int argc, char** argv)
                       << ", nan " << (std::isnan (probe.getSample (0, 0)) ? "yes" : "no") << "\n";
             juce::Thread::sleep (attempt == 0 ? 0 : 400);
         }
+    }
+
+    if (juce::String (argv[2]) == "--timing")
+    {
+        const auto block = argc > 3 ? juce::String (argv[3]).getIntValue() : 64;
+        plugin->releaseResources();
+        plugin->setPlayConfigDetails (2, 2, sampleRate, block);
+        plugin->prepareToPlay (sampleRate, block);
+
+        juce::AudioBuffer<float> buffer (2, block);
+        juce::MidiBuffer midi;
+        juce::Random random (11);
+        const auto fill = [&]
+        {
+            for (int ch = 0; ch < 2; ++ch)
+                for (int i = 0; i < block; ++i)
+                    buffer.setSample (ch, i, (random.nextFloat() - 0.5f) * 0.2f);
+        };
+
+        for (int i = 0; i < static_cast<int> (3.0 * sampleRate / block); ++i)
+        {
+            fill();
+            plugin->processBlock (buffer, midi);
+            if (i % 200 == 0)
+                juce::Thread::sleep (2);
+        }
+
+        std::vector<double> times;
+        const auto blocks = static_cast<int> (20.0 * sampleRate / block);
+        times.reserve (static_cast<size_t> (blocks));
+        for (int i = 0; i < blocks; ++i)
+        {
+            fill();
+            const auto start = juce::Time::getHighResolutionTicks();
+            plugin->processBlock (buffer, midi);
+            times.push_back (juce::Time::highResolutionTicksToSeconds (juce::Time::getHighResolutionTicks() - start));
+        }
+
+        const auto budget = block / sampleRate;
+        const auto total = std::accumulate (times.begin(), times.end(), 0.0);
+        std::sort (times.begin(), times.end());
+        std::cout << "block " << block << ": average " << juce::String (100.0 * total / (blocks * budget), 2) << "% of one core, p99 block "
+                  << juce::String (100.0 * times[static_cast<size_t> (times.size() * 0.99)] / budget, 1) << "%, p99.9 "
+                  << juce::String (100.0 * times[static_cast<size_t> (times.size() * 0.999)] / budget, 1) << "%, worst "
+                  << juce::String (100.0 * times.back() / budget, 1) << "% of the block's time\n";
+        plugin->releaseResources();
+        return 0;
     }
 
     juce::AudioProcessorParameter* mix = nullptr;
