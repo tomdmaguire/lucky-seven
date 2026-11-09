@@ -73,6 +73,8 @@
 
   .shot { margin: 8px 0 0; }
   .shot img { border-radius: 12px; border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.45); }
+  .substeps { margin: 8px 0; padding-left: 20px; color: var(--dim); }
+  .substeps li { margin: 4px 0; }
   figcaption { color: var(--dim); font-size: 15px; margin-top: 12px; }
 
   section { padding-block: 64px; }
@@ -87,8 +89,8 @@
   .gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; }
 
   .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 26px; counter-reset: step; max-width: 780px; }
-  .steps li { counter-increment: step; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; }
-  .steps li::before { content: counter(step); font-family: var(--display); font-weight: 600; font-size: 22px; color: var(--amber); width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center; }
+  .steps > li { counter-increment: step; display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 16px; }
+  .steps > li::before { content: counter(step); font-family: var(--display); font-weight: 600; font-size: 22px; color: var(--amber); width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; display: grid; place-items: center; }
   .steps h3 { font-family: var(--display); font-weight: 600; font-size: 20px; letter-spacing: 0.03em; margin: 6px 0 4px; }
   .steps p { margin: 0 0 8px; color: var(--dim); }
   code { font-family: var(--mono); font-size: 0.86em; color: var(--cream); background: var(--strip); padding: 2px 6px; border-radius: 4px; }
@@ -255,9 +257,14 @@
         </li>
         <li>
           <div>
-            <h3>Let macOS open it</h3>
-            <p>Lucky Seven is free, so it isn't signed with a paid Apple developer certificate. The first time you open the installer, macOS shows <em>&ldquo;Lucky-Seven.pkg&rdquo; Not Opened: Apple could not verify&hellip;</em>. That's expected.</p>
-            <p>Click <strong>Done</strong> (not Move to Trash), then open <strong>System Settings &rarr; Privacy &amp; Security</strong>, scroll down to Security and click <strong>Open Anyway</strong>. Confirm with your password, then click <strong>Open</strong>. You only need to do this once. On recent versions of macOS the old right-click &rarr; Open shortcut no longer works, so this is the way through.</p>
+            <h3>Give the installer permission to run</h3>
+            <p>macOS blocks the installer the first time with <em>&ldquo;Lucky-Seven.pkg&rdquo; Not Opened</em>, because free apps like Lucky Seven aren't signed with a paid Apple certificate. To allow it:</p>
+            <ol class="substeps">
+              <li>Click <strong>Done</strong> (not Move to Trash).</li>
+              <li>Open <strong>System Settings &rarr; Privacy &amp; Security</strong> and scroll down to Security.</li>
+              <li>Click <strong>Open Anyway</strong>, enter your password, then click <strong>Open</strong>.</li>
+            </ol>
+            <p>You only need to do this once.</p>
           </div>
         </li>
         <li>
