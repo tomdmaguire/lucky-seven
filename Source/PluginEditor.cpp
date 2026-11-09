@@ -87,6 +87,11 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     };
     addAndMakeVisible (programButton);
 
+    logoButton.setMouseCursor (juce::MouseCursor::PointingHandCursor);
+    logoButton.setTooltip ("Back to the map");
+    logoButton.onClick = [this] { setView (lucky::BrowserPanel::View::map); };
+    addAndMakeVisible (logoButton);
+
     for (size_t i = 0; i < slotButtons.size(); ++i)
     {
         auto& button = slotButtons[i];
@@ -484,7 +489,8 @@ void LuckySevenView::resized()
     auto bounds = getLocalBounds();
 
     auto topBar = bounds.removeFromTop (topBarHeight);
-    topBar.removeFromLeft (logoWidth + 1);
+    logoButton.setBounds (topBar.removeFromLeft (logoWidth));
+    topBar.removeFromLeft (1);
     menuButton.setBounds (topBar.removeFromRight (iconWidth));
     listTab.setBounds (topBar.removeFromRight (tabWidth));
     mapTab.setBounds (topBar.removeFromRight (tabWidth));

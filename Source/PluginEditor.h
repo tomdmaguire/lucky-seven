@@ -56,7 +56,7 @@ private:
     lucky::BrowserPanel browser;
     juce::TextButton mapTab { "MAP" }, listTab { "LIST" };
     juce::TextButton previousButton { juce::String::fromUTF8 ("\xe2\x80\xb9") }, nextButton { juce::String::fromUTF8 ("\xe2\x80\xba") };
-    juce::TextButton programButton;
+    juce::TextButton programButton, logoButton;
     lucky::HeartButton favouriteButton;
     juce::DrawableButton menuButton { "Menu", juce::DrawableButton::ImageFitted };
     Knob predelay, decay, lowCut, highCut, mix;
