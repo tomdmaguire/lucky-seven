@@ -16,7 +16,7 @@ A free true-stereo convolution reverb (VST3 and AU) built around the Bricasti M7
 - **Resizable window** from 75% to 200%: drag the corner or pick a size from the **⋯** menu.
 - **True stereo**: separate left- and right-input responses, as captured from the hardware.
 - **Your own IRs**: add any number of folders of WAV, AIFF or FLAC impulse responses (**··· → IR folders → Add a folder…**). Each subfolder becomes a category, numbered folder names are tidied, left/right file pairs play in true stereo, and recordings with a hiss floor are measured and trimmed correctly. Works with Ableton's Convolution Reverb pack: add `~/Music/Ableton/Factory Packs/Convolution Reverb/IRs`.
-- **Light on CPU**: about 2–3% of one core per instance for the longest programs at 44.1/48 kHz on Apple Silicon, and no processing at all once the input has been silent for longer than the tail. At 88.2/96 kHz the cost roughly triples, so use a buffer of 256 samples or more there.
+- **Light on CPU**: the long tail is computed on a background thread, so the audio thread uses about 1% of a core per instance with no bursts, even at a 64-sample buffer and with 30-second IRs. Instances also stop processing once the input has been silent for longer than the tail.
 
 ## Installing
 
