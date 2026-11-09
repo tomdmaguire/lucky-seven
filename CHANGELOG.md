@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Lucky Seven now appears under Lucky Labs in your DAW's plug-in list. Rescan plug-ins after updating. Existing sessions still load it.
+
 ## v1.2.0
 
 - New Width knob: narrows the reverb from its natural stereo image down to mono, leaving the dry signal untouched.

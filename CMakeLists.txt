@@ -18,8 +18,8 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 juce_add_plugin(LuckySeven
-    COMPANY_NAME "Lucky Seven"
-    BUNDLE_ID com.luckyseven.reverb
+    COMPANY_NAME "Lucky Labs"
+    BUNDLE_ID com.luckylabs.luckyseven
     PLUGIN_MANUFACTURER_CODE Lcky
     PLUGIN_CODE Lsv7
     FORMATS VST3 AU Standalone

@@ -21,11 +21,11 @@ for kind in vst3 au; do
 done
 
 pkgbuild --quiet --root "$work/vst3" --component-plist "$work/vst3.plist" \
-  --identifier com.luckyseven.reverb.vst3 --version "$version" --install-location / \
+  --identifier com.luckylabs.luckyseven.vst3 --version "$version" --install-location / \
   "$work/packages/LuckySeven-VST3.pkg"
 
 pkgbuild --quiet --root "$work/au" --component-plist "$work/au.plist" --scripts "$here/pkg-scripts/au" \
-  --identifier com.luckyseven.reverb.au --version "$version" --install-location / \
+  --identifier com.luckylabs.luckyseven.au --version "$version" --install-location / \
   "$work/packages/LuckySeven-AU.pkg"
 
 sed "s/__VERSION__/$version/g" "$here/distribution.xml" > "$work/distribution.xml"
