@@ -49,7 +49,18 @@ BrowserPanel::~BrowserPanel()
 
 bool BrowserPanel::keyPressed (const juce::KeyPress& key, juce::Component* originator)
 {
-    if (originator == &searchBox && key.getKeyCode() == juce::KeyPress::downKey)
+    const auto code = key.getKeyCode();
+    const auto isArrow = code == juce::KeyPress::leftKey || code == juce::KeyPress::rightKey
+                      || code == juce::KeyPress::upKey || code == juce::KeyPress::downKey;
+
+    if (originator == &searchBox && isArrow && searchBox.isEmpty())
+    {
+        focusCurrentView();
+        auto* focused = juce::Component::getCurrentlyFocusedComponent();
+        return focused != nullptr && focused != &searchBox && focused->keyPressed (key);
+    }
+
+    if (originator == &searchBox && code == juce::KeyPress::downKey)
     {
         jumpToFirstResult();
         return true;
@@ -61,6 +72,7 @@ void BrowserPanel::applySearch()
 {
     const auto terms = parseSearch (searchBox.getText());
     clearSearchButton.setVisible (searchBox.getText().isNotEmpty());
+    repaint();
     list.setSearch (terms);
     map.setSearch (terms);
 }
@@ -102,6 +114,18 @@ void BrowserPanel::setView (View view)
     currentView = view;
     map.setVisible (view == View::map);
     list.setVisible (view == View::list);
+    repaint();
+
+    if (isShowing())
+        focusCurrentView();
+}
+
+void BrowserPanel::focusCurrentView()
+{
+    if (currentView == View::list)
+        list.focusPrograms();
+    else
+        map.grabKeyboardFocus();
 }
 
 void BrowserPanel::paint (juce::Graphics& g)
@@ -118,6 +142,14 @@ void BrowserPanel::paintOverChildren (juce::Graphics& g)
     g.setColour (theme::textDim);
     g.drawEllipse (icon.withTrimmedRight (3.0f).withTrimmedBottom (3.0f), 1.3f);
     g.drawLine (icon.getRight() - 4.0f, icon.getBottom() - 4.0f, icon.getRight(), icon.getBottom(), 1.3f);
+
+    if (currentView == View::map && searchBox.isEmpty())
+    {
+        g.setColour (theme::textDim.withAlpha (0.7f));
+        g.setFont (theme::labelFont (10.0f));
+        g.drawText (juce::String::fromUTF8 ("\xe2\x86\x90 \xe2\x86\x92 \xe2\x86\x91 \xe2\x86\x93  TO BROWSE"),
+                    searchBox.getBounds().toFloat().reduced (14.0f, 0.0f), juce::Justification::centredRight);
+    }
 }
 
 void BrowserPanel::resized()

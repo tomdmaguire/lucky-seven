@@ -606,37 +606,6 @@ void SoundMapView::mouseDown (const juce::MouseEvent& event)
     }
 }
 
-int SoundMapView::nearestAlongDecay (int from, bool longer) const
-{
-    const auto origin = dots[static_cast<size_t> (from)].target;
-    const auto height = plotArea().getHeight();
-
-    for (const auto band : { 0.06f, 0.15f, 1.0f })
-    {
-        auto best = -1;
-        auto bestDistance = std::numeric_limits<float>::max();
-
-        for (size_t i = 0; i < dots.size(); ++i)
-        {
-            const auto delta = dots[i].target - origin;
-            const auto along = longer ? delta.x : -delta.x;
-            if (static_cast<int> (i) == from || ! isShown (dots[i]) || along <= 0.5f || std::abs (delta.y) > band * height)
-                continue;
-
-            if (along < bestDistance)
-            {
-                bestDistance = along;
-                best = static_cast<int> (i);
-            }
-        }
-
-        if (best >= 0)
-            return best;
-    }
-
-    return -1;
-}
-
 bool SoundMapView::keyPressed (const juce::KeyPress& key)
 {
     juce::Point<float> direction;
@@ -655,17 +624,6 @@ bool SoundMapView::keyPressed (const juce::KeyPress& key)
     const auto current = selectedDot();
     if (current < 0)
         return true;
-
-    if (key.getModifiers().isShiftDown() && juce::exactlyEqual (direction.y, 0.0f))
-    {
-        if (const auto target = nearestAlongDecay (current, direction.x > 0.0f); target >= 0)
-        {
-            selectedId = dots[static_cast<size_t> (target)].item->entry.id();
-            onSelect (selectedId);
-            repaint();
-        }
-        return true;
-    }
 
     const auto origin = dots[static_cast<size_t> (current)].position;
     auto best = -1;
@@ -708,17 +666,14 @@ void SoundMapView::paintHoverCard (juce::Graphics& g) const
 
     const juce::Font nameFont (juce::FontOptions (14.0f));
     const juce::Font detailFont (theme::labelFont (10.0f));
-    const juce::Font hintFont (theme::labelFont (9.0f));
 
     const auto details = entry.category.toUpperCase() + (entry.number > 0 ? " " + juce::String (entry.number).paddedLeft ('0', 2) : juce::String())
                        + (dot.item->profile ? juce::String::fromUTF8 ("  \xc2\xb7  ") + theme::formatSeconds (dot.item->profile->midT60) : juce::String());
-    const auto hint = juce::String::fromUTF8 ("SHIFT \xe2\x86\x90 \xe2\x86\x92  SHORTER / LONGER, SIMILAR TONE");
 
     constexpr auto padding = 10.0f;
     const auto width = padding * 2.0f + std::max ({ juce::GlyphArrangement::getStringWidth (nameFont, entry.name) + 14.0f,
-                                                    juce::GlyphArrangement::getStringWidth (detailFont, details),
-                                                    juce::GlyphArrangement::getStringWidth (hintFont, hint) });
-    constexpr auto height = 72.0f;
+                                                    juce::GlyphArrangement::getStringWidth (detailFont, details) });
+    constexpr auto height = 52.0f;
 
     auto card = juce::Rectangle<float> (width, height).withCentre (dot.position).withY (dot.position.y - height - 16.0f);
     if (card.getY() < 4.0f)
@@ -741,14 +696,6 @@ void SoundMapView::paintHoverCard (juce::Graphics& g) const
     g.setColour (theme::textDim);
     g.setFont (detailFont);
     g.drawText (details, content.removeFromTop (16.0f), juce::Justification::centredLeft);
-
-    content.removeFromTop (4.0f);
-    g.setColour (theme::outline);
-    g.fillRect (content.removeFromTop (1.0f));
-    content.removeFromTop (3.0f);
-    g.setColour (theme::textDim.withAlpha (0.6f));
-    g.setFont (hintFont);
-    g.drawText (hint, content, juce::Justification::centredLeft);
 }
 
 } // namespace lucky

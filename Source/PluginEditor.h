@@ -68,6 +68,7 @@ private:
     std::vector<lucky::BrowserItem> items;
     juce::String shownSelection;
     float shownOriginalT60 = -1.0f;
+    bool initialFocusGiven = false;
     juce::Colour accent { lucky::theme::accent };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (LuckySevenView)

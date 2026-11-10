@@ -113,10 +113,11 @@ int checkKeys()
 
     auto* map = findById (*editor, "soundMap");
     std::cout << "start:        " << processor.getSelectedIrId() << "\n";
-    for (const auto& [name, key] : { std::pair { "shift+right", juce::KeyPress::rightKey }, std::pair { "shift+right", juce::KeyPress::rightKey },
-                                     std::pair { "shift+left", juce::KeyPress::leftKey } })
+    for (const auto& [name, key] : { std::pair { "right", juce::KeyPress::rightKey }, std::pair { "right", juce::KeyPress::rightKey },
+                                     std::pair { "left", juce::KeyPress::leftKey }, std::pair { "up", juce::KeyPress::upKey },
+                                     std::pair { "down", juce::KeyPress::downKey } })
     {
-        map->keyPressed (juce::KeyPress (key, juce::ModifierKeys::shiftModifier, 0));
+        map->keyPressed (juce::KeyPress (key));
         pumpMessages (0.1);
         std::cout << juce::String (name).paddedRight (' ', 14) << processor.getSelectedIrId() << "\n";
     }

@@ -94,8 +94,6 @@ private:
     int dotAt (juce::Point<float> point) const;
     int selectedDot() const;
 
-    /** Nearest visible dot that is shorter or longer, preferring ones at a similar brightness. */
-    int nearestAlongDecay (int from, bool longer) const;
     void paintAxes (juce::Graphics&, juce::Rectangle<float> area) const;
     void paintLegend (juce::Graphics&) const;
     void paintHoverCard (juce::Graphics&) const;

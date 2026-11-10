@@ -170,6 +170,13 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     audioProcessor.getCatalogue().rescan();
     refreshItems();
 
+    for (auto* child : getChildren())
+        if (child != &browser)
+        {
+            child->setWantsKeyboardFocus (false);
+            child->setMouseClickGrabsKeyboardFocus (false);
+        }
+
     setSize (baseWidth, baseHeight);
     startTimerHz (20);
 }
@@ -345,6 +352,12 @@ void LuckySevenView::stepProgram (int delta)
 
 void LuckySevenView::timerCallback()
 {
+    if (! initialFocusGiven && isShowing())
+    {
+        initialFocusGiven = true;
+        browser.focusCurrentView();
+    }
+
     browser.setDecayRatio (static_cast<float> (decay.slider.getValue() / 100.0));
 
     if (const auto original = audioProcessor.getOriginalT60(); ! juce::approximatelyEqual (original, shownOriginalT60))

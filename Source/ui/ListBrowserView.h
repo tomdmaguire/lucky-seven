@@ -24,6 +24,9 @@ public:
     /** Moves keyboard focus to the first result and loads it. */
     void focusFirstResult();
 
+    /** Gives the program column keyboard focus without changing the selection. */
+    void focusPrograms() { programList.grabKeyboardFocus(); }
+
     /** Highlights the given program and its category without firing the selection callback. */
     void setSelectedId (const juce::String& id);
 

@@ -31,6 +31,9 @@ public:
     void setLevelSource (std::function<std::pair<float, float>()> source) { map.setLevelSource (std::move (source)); }
     void setView (View view);
 
+    /** Gives keyboard focus to the visible map or list, so the arrow keys browse it. */
+    void focusCurrentView();
+
     void paint (juce::Graphics&) override;
     void paintOverChildren (juce::Graphics&) override;
     void resized() override;
