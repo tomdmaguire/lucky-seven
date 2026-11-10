@@ -143,7 +143,7 @@ void BrowserPanel::paintOverChildren (juce::Graphics& g)
     g.drawEllipse (icon.withTrimmedRight (3.0f).withTrimmedBottom (3.0f), 1.3f);
     g.drawLine (icon.getRight() - 4.0f, icon.getBottom() - 4.0f, icon.getRight(), icon.getBottom(), 1.3f);
 
-    if (currentView == View::map && searchBox.isEmpty())
+    if (searchBox.isEmpty())
     {
         g.setColour (theme::textDim.withAlpha (0.7f));
         g.setFont (theme::labelFont (10.0f));

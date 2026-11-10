@@ -12,12 +12,17 @@ constexpr int heartColumnWidth = 36;
 constexpr int allResultsCategory = -1;
 constexpr int categoryTagWidth = 110;
 
-void paintRowBackground (juce::Graphics& g, int width, int height, bool selected, juce::Colour colour)
+/** Draws the selection highlight: full with a side bar in the column that has keyboard focus, a faint tint in the other. */
+void paintRowBackground (juce::Graphics& g, int width, int height, bool selected, bool focused, juce::Colour colour)
 {
-    if (selected)
+    if (! selected)
+        return;
+
+    g.setColour (colour.withAlpha (focused ? 0.12f : 0.05f));
+    g.fillRect (0, 0, width, height);
+
+    if (focused)
     {
-        g.setColour (colour.withAlpha (0.12f));
-        g.fillRect (0, 0, width, height);
         g.setColour (colour);
         g.fillRect (0, 0, 2, height);
     }
@@ -39,7 +44,7 @@ public:
         const auto& [index, name] = owner.categories[static_cast<size_t> (row)];
         const auto colour = index == allResultsCategory ? theme::text : theme::categoryColour (index);
         const auto count = owner.programsInCategory (row).size();
-        paintRowBackground (g, width, height, selected, colour);
+        paintRowBackground (g, width, height, selected, owner.categoryList.hasKeyboardFocus (true), colour);
 
         g.setColour (count == 0 ? colour.withAlpha (0.3f) : colour);
         if (index == allResultsCategory)
@@ -78,7 +83,7 @@ public:
             return;
 
         const auto& item = *programs[static_cast<size_t> (row)];
-        paintRowBackground (g, width, height, selected, theme::categoryColour (item.entry.categoryIndex));
+        paintRowBackground (g, width, height, selected, owner.programList.hasKeyboardFocus (true), theme::categoryColour (item.entry.categoryIndex));
 
         const auto tagWidth = owner.showsMixedCategories() ? categoryTagWidth : 0;
 
@@ -215,10 +220,12 @@ ListBrowserView::ListBrowserView (SelectionCallback callback, SelectionCallback 
 
     categoryList.setModel (categoryModel.get());
     programList.setModel (programModel.get());
+    juce::Desktop::getInstance().addFocusChangeListener (this);
 }
 
 ListBrowserView::~ListBrowserView()
 {
+    juce::Desktop::getInstance().removeFocusChangeListener (this);
     categoryList.removeKeyListener (this);
     programList.removeKeyListener (this);
 }
@@ -240,6 +247,12 @@ bool ListBrowserView::keyPressed (const juce::KeyPress& key, juce::Component* or
     }
 
     return false;
+}
+
+void ListBrowserView::globalFocusChanged (juce::Component*)
+{
+    categoryList.repaint();
+    programList.repaint();
 }
 
 void ListBrowserView::setItems (std::vector<BrowserItem> newItems)

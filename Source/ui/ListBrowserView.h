@@ -9,7 +9,8 @@ namespace lucky
 /** Two-column browser: categories on the left, the selected category's programs on the right, both alphabetical.
     A search (set by BrowserPanel) filters both columns and adds an "All results" entry spanning every category. */
 class ListBrowserView final : public juce::Component,
-                              private juce::KeyListener
+                              private juce::KeyListener,
+                              private juce::FocusChangeListener
 {
 public:
     ListBrowserView (SelectionCallback onSelect, SelectionCallback onToggleFavourite);
@@ -41,6 +42,7 @@ private:
 
     using juce::Component::keyPressed;
     bool keyPressed (const juce::KeyPress& key, juce::Component* originator) override;
+    void globalFocusChanged (juce::Component*) override;
 
     void showCategory (int categoryRow);
     void selectCategoryRow (int categoryRow);
