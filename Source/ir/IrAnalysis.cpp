@@ -2,6 +2,7 @@
 
 #include <juce_dsp/juce_dsp.h>
 #include <cmath>
+#include <future>
 #include <numeric>
 
 namespace lucky
@@ -212,19 +213,31 @@ DecayProfile analyse (const juce::AudioBuffer<float>& ir, double sampleRate)
         return decayStart < static_cast<std::ptrdiff_t> (energy.size()) ? std::vector<double> (energy.begin() + decayStart, energy.end()) : energy;
     };
 
+    struct BandResult
+    {
+        float t60;
+        double tailEnergy;
+    };
+
+    std::array<std::future<BandResult>, analysisBands.size()> bands;
+    for (size_t band = 0; band < bands.size(); ++band)
+        bands[band] = std::async (std::launch::async, [&, band]
+        {
+            const auto energy = bandEnergy (ir, sampleRate, analysisBands[band]);
+            const auto tailEnergy = skip < energy.size() ? std::accumulate (energy.begin() + static_cast<std::ptrdiff_t> (skip), energy.end(), 0.0) : 0.0;
+            return BandResult { estimateT60 (afterDirectSound (energy), sampleRate), tailEnergy };
+        });
+
     const auto broadbandT60 = estimateT60 (afterDirectSound (broadbandEnergy (ir)), sampleRate);
 
     double weightedLogFrequency = 0.0, totalTailEnergy = 0.0;
 
-    for (size_t band = 0; band < analysisBands.size(); ++band)
+    for (size_t band = 0; band < bands.size(); ++band)
     {
-        const auto energy = bandEnergy (ir, sampleRate, analysisBands[band]);
-        const auto t60 = estimateT60 (afterDirectSound (energy), sampleRate);
-        profile.bandT60[band] = t60 > 0.0f ? t60 : broadbandT60;
-
-        const auto tailEnergy = skip < energy.size() ? std::accumulate (energy.begin() + static_cast<std::ptrdiff_t> (skip), energy.end(), 0.0) : 0.0;
-        weightedLogFrequency += tailEnergy * std::log2 (static_cast<double> (analysisBands[band]));
-        totalTailEnergy += tailEnergy;
+        const auto result = bands[band].get();
+        profile.bandT60[band] = result.t60 > 0.0f ? result.t60 : broadbandT60;
+        weightedLogFrequency += result.tailEnergy * std::log2 (static_cast<double> (analysisBands[band]));
+        totalTailEnergy += result.tailEnergy;
     }
 
     profile.midT60 = 0.5f * (profile.bandT60[2] + profile.bandT60[3]);
