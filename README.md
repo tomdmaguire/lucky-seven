@@ -6,10 +6,11 @@ Website: https://tomdmaguire.github.io/lucky-seven/
 
 ## Features
 
-- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (Shift+←/→ jumps to the nearest shorter or longer program with a similar tone), and click legend entries to filter by category or favourites. The search box narrows it further. While audio plays, ripples spread from the current program and fade over its decay time.
+- **Sound map**: every program plotted by decay time and brightness, coloured by category. Click a dot to load it, use the arrow keys to move to neighbours (←/→ for shorter or longer, ↑/↓ for brighter or darker), press Tab to switch between the map and the list, and click legend entries to filter by category or favourites. The search box narrows it further. While audio plays, ripples spread from the current program and fade over its decay time.
 - **List view** with search across all categories, favourites, and A–Z browsing.
 - **Decay**: shortens any program's tail while keeping its frequency-dependent character (highs still die faster than lows).
-- **Pre-delay**, plus **Low Cut** (20 Hz–1 kHz) and **High Cut** (1–20 kHz) at 12 dB/oct on the reverb only.
+- **Damping** (250 Hz–20 kHz): above the chosen frequency, highs die away faster, the way a real room soaks up treble: the start of the reverb darkens a little and the tail a lot. Each octave above it halves the decay time.
+- **Pre-delay**, plus **Low Cut** (20 Hz–1 kHz, 12 dB/oct) on the reverb only.
 - **Width**: narrows the reverb from the IR's natural stereo image down to mono, so it can sit behind its source instead of spreading across the mix. The dry signal is untouched.
 - **Output modes**:
   - **Mix**: dry/wet balance that keeps the dry signal near full level until the top of the knob.

@@ -3,6 +3,13 @@
 ## Unreleased
 
 - Lucky Seven now appears under Lucky Labs in your DAW's plug-in list. Rescan plug-ins after updating. Existing sessions still load it.
+- High Cut is now Damping. Instead of filtering the whole reverb evenly, it makes high frequencies die away faster, so the start of the reverb darkens a little and the tail a lot. It goes down to 250 Hz for really dark reverbs. Saved sessions, including A/B slots, keep their setting, which now sets the damping frequency.
+- While you turn Decay or Damping, the part of the knob's arc you haven't heard yet shows in grey; the sound updates as soon as you pause, without letting go of the mouse.
+- The arrow keys always browse the map or list on screen: no need to click it first, even after switching views or while turning a knob.
+- Switching programs is around three times faster.
+- Tab switches between the map and the list.
+- In the list view, the column you're navigating shows a full highlight and the other is dimmed, so ←/→ visibly move between categories and programs.
+- Arrow keys on the map are now the whole story: ←/→ for shorter or longer, ↑/↓ for brighter or darker, with a hint in the search bar (the arrows browse the list view too). Shift+←/→ is gone; the plain arrows already keep a similar tone.
 
 ## v1.2.0
 
