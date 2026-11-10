@@ -15,32 +15,50 @@ constexpr float bypassRatio = 0.999f;
 constexpr float ln1000 = 6.907755f;
 constexpr float trimFloor = 1.5849e-5f;
 constexpr double fadeOutSeconds = 0.01;
+constexpr float firstPassSeconds = 0.025f;
 
-std::vector<float> makeDecayRates (const DecayProfile& profile, double sampleRate, float ratio)
+float dampingFactor (float frequency, float dampingHz)
 {
-    std::vector<float> rates (frameSize / 2 + 1);
+    return dampingHz < dampingOffHz && frequency > dampingHz ? dampingHz / frequency : 1.0f;
+}
 
-    for (size_t bin = 0; bin < rates.size(); ++bin)
+/** Per-bin envelope: the gain at time t after the onset is exp (-rate * t) * firstPassGain. */
+struct Envelope
+{
+    std::vector<float> rate, firstPassGain;
+};
+
+/** Damping also darkens the start of the response by the amount it would over firstPassSeconds,
+    like a damping filter inside an algorithmic reverb's loop that even the first reflections pass through once. */
+Envelope makeEnvelope (const DecayProfile& profile, double sampleRate, float ratio, float dampingHz)
+{
+    const auto bins = static_cast<size_t> (frameSize / 2 + 1);
+    Envelope envelope { std::vector<float> (bins), std::vector<float> (bins) };
+
+    for (size_t bin = 0; bin < bins; ++bin)
     {
         const auto frequency = static_cast<float> (static_cast<double> (bin) * sampleRate / frameSize);
         const auto t60 = std::max (t60AtFrequency (profile, frequency), 0.01f);
-        rates[bin] = ln1000 * (1.0f / (ratio * t60) - 1.0f / t60);
+        const auto decayRate = ln1000 * (1.0f / (ratio * t60) - 1.0f / t60);
+        const auto binRatio = std::max (ratio * dampingFactor (frequency, dampingHz), 0.01f);
+        envelope.rate[bin] = ln1000 * (1.0f / (binRatio * t60) - 1.0f / t60);
+        envelope.firstPassGain[bin] = std::exp (-(envelope.rate[bin] - decayRate) * firstPassSeconds);
     }
 
-    return rates;
+    return envelope;
 }
 } // namespace
 
 juce::AudioBuffer<float> shortenDecay (const juce::AudioBuffer<float>& ir, double sampleRate,
-                                       const DecayProfile& profile, float ratio)
+                                       const DecayProfile& profile, float ratio, float dampingHz)
 {
     juce::AudioBuffer<float> result (ir);
 
-    if (ratio >= bypassRatio || ir.getNumSamples() == 0)
+    if ((ratio >= bypassRatio && dampingHz >= dampingOffHz) || ir.getNumSamples() == 0)
         return result;
 
     const auto numSamples = ir.getNumSamples();
-    const auto rates = makeDecayRates (profile, sampleRate, std::max (ratio, 0.01f));
+    const auto envelope = makeEnvelope (profile, sampleRate, std::max (std::min (ratio, 1.0f), 0.01f), dampingHz);
 
     juce::dsp::FFT fft (fftOrder);
     juce::dsp::WindowingFunction<float>::WindowingMethod method = juce::dsp::WindowingFunction<float>::hann;
@@ -76,9 +94,9 @@ juce::AudioBuffer<float> shortenDecay (const juce::AudioBuffer<float>& ir, doubl
             const auto centre = start + frameSize / 2 - profile.onsetSample;
             const auto t = static_cast<float> (std::max (centre, 0)) / static_cast<float> (sampleRate);
 
-            for (size_t bin = 0; bin < rates.size(); ++bin)
+            for (size_t bin = 0; bin < envelope.rate.size(); ++bin)
             {
-                const auto gain = std::exp (-rates[bin] * t);
+                const auto gain = std::exp (-envelope.rate[bin] * t) * envelope.firstPassGain[bin];
                 frame[2 * bin] *= gain;
                 frame[2 * bin + 1] *= gain;
             }

@@ -1,5 +1,6 @@
 #include "dsp/DecayShaper.h"
 #include <juce_core/juce_core.h>
+#include <juce_dsp/juce_dsp.h>
 
 namespace
 {
@@ -68,6 +69,63 @@ public:
             signalEnergy += ir.getSample (0, i) * ir.getSample (0, i);
         }
         expectLessThan (errorEnergy / signalEnergy, 1.0e-3);
+
+        beginTest ("damping off leaves the IR untouched");
+        const auto undamped = lucky::shortenDecay (ir, sampleRate, profile, 1.0f, lucky::dampingOffHz);
+        auto unchanged = undamped.getNumSamples() == ir.getNumSamples();
+        for (int ch = 0; unchanged && ch < ir.getNumChannels(); ++ch)
+            for (int i = 0; i < ir.getNumSamples(); ++i)
+                unchanged = unchanged && juce::exactlyEqual (undamped.getSample (ch, i), ir.getSample (ch, i));
+        expect (unchanged);
+
+        beginTest ("damping at 2 kHz keeps the low bands and halves the decay per octave above");
+        expectBandT60s (lucky::analyse (lucky::shortenDecay (ir, sampleRate, profile, 1.0f, 2000.0f), sampleRate), 2.0f);
+
+        beginTest ("damping combines with decay");
+        expectBandT60s (lucky::analyse (lucky::shortenDecay (ir, sampleRate, profile, 0.5f, 2000.0f), sampleRate), 1.0f);
+
+        beginTest ("damping darkens the early response above its frequency only");
+        const auto darkened = lucky::shortenDecay (ir, sampleRate, profile, 1.0f, 1000.0f);
+        const auto earlyDb = [] (const juce::AudioBuffer<float>& buffer, juce::dsp::IIR::Coefficients<float>::Ptr coefficients)
+        {
+            juce::dsp::IIR::Filter<float> first (coefficients), second (coefficients);
+            double energy = 0.0;
+            for (int i = 0; i < static_cast<int> (0.03 * sampleRate); ++i)
+            {
+                const auto filtered = second.processSample (first.processSample (buffer.getSample (0, i)));
+                energy += filtered * filtered;
+            }
+            return 10.0 * std::log10 (energy);
+        };
+        const auto highs = juce::dsp::IIR::Coefficients<float>::makeHighPass (sampleRate, 6000.0f);
+        const auto lows = juce::dsp::IIR::Coefficients<float>::makeLowPass (sampleRate, 500.0f);
+        expectLessThan (earlyDb (darkened, highs), earlyDb (ir, highs) - 6.0);
+        expectWithinAbsoluteError (earlyDb (darkened, lows), earlyDb (ir, lows), 0.5);
+    }
+
+private:
+    /** Expects bands up to 1 kHz at lowT60 and, for damped bands, a T60 between the damped values at the band's centre and lower edge,
+        since an octave band's measured decay is dominated by its slowest-decaying frequencies (with some headroom for slower
+        frequencies leaking in through the analysis filter's skirt). */
+    void expectBandT60s (const lucky::DecayProfile& damped, float lowT60)
+    {
+        constexpr float dampingHz = 2000.0f;
+
+        for (size_t band = 1; band < lucky::analysisBands.size(); ++band)
+        {
+            const auto frequency = lucky::analysisBands[band];
+            const auto name = "band " + juce::String (frequency);
+
+            if (frequency < dampingHz)
+            {
+                expectWithinAbsoluteError (damped.bandT60[band], lowT60, lowT60 * 0.1f, name);
+            }
+            else if (frequency > dampingHz)
+            {
+                expectGreaterThan (damped.bandT60[band], 0.9f * lowT60 * dampingHz / frequency, name);
+                expectLessThan (damped.bandT60[band], 1.25f * lowT60 * dampingHz / (frequency / juce::MathConstants<float>::sqrt2), name);
+            }
+        }
     }
 };
 
