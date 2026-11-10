@@ -4,6 +4,21 @@
 namespace
 {
 const juce::String defaultIrId { "Chambers/17 Sunset Chamber" };
+
+/** Re-expresses damping in A/B slots saved before its range was extended down from 1 kHz, keeping the same frequency. */
+void migrateSlotDamping (juce::ValueTree& state)
+{
+    const juce::Identifier damping (LuckySevenProcessor::dampingId);
+    const auto maxHz = lucky::ReverbEngine::maxCutHz;
+
+    for (auto slot : state)
+        if (slot.hasType (LuckySevenProcessor::slotType) && slot.hasProperty (damping))
+        {
+            const auto proportion = static_cast<float> (slot.getProperty (damping));
+            const auto hertz = LuckySevenProcessor::legacyDampingMinHz * std::pow (maxHz / LuckySevenProcessor::legacyDampingMinHz, proportion);
+            slot.setProperty (damping, std::log (hertz / LuckySevenProcessor::dampingMinHz) / std::log (maxHz / LuckySevenProcessor::dampingMinHz), nullptr);
+        }
+}
 } // namespace
 
 LuckySevenProcessor::LuckySevenProcessor()
@@ -17,9 +32,10 @@ LuckySevenProcessor::LuckySevenProcessor()
     blendDb = parameters.getRawParameterValue (blendId);
     outputMode = parameters.getRawParameterValue (outputModeId);
     lowCutHz = parameters.getRawParameterValue (lowCutId);
-    highCutHz = parameters.getRawParameterValue (highCutId);
     widthPercent = parameters.getRawParameterValue (widthId);
-    loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId));
+    parameters.state.setProperty (stateVersionProperty, stateVersion, nullptr);
+    loader = std::make_unique<lucky::IrLoader> (engine, *parameters.getRawParameterValue (decayId),
+                                                *parameters.getRawParameterValue (dampingId));
     selectIr (defaultIrId);
 }
 
@@ -56,8 +72,8 @@ juce::AudioProcessorValueTreeState::ParameterLayout LuckySevenProcessor::createL
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { lowCutId, 2 }, "Low Cut",
                                                      logRange (lucky::ReverbEngine::minCutHz, lowCutMaxHz),
                                                      lucky::ReverbEngine::minCutHz, hertzLabel),
-        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { highCutId, 2 }, "High Cut",
-                                                     logRange (highCutMinHz, lucky::ReverbEngine::maxCutHz),
+        std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { dampingId, 2 }, "Damping",
+                                                     logRange (dampingMinHz, lucky::ReverbEngine::maxCutHz),
                                                      lucky::ReverbEngine::maxCutHz, hertzLabel),
         std::make_unique<juce::AudioParameterFloat> (juce::ParameterID { widthId, 3 }, "Width",
                                                      Range (0.0f, 100.0f, 0.1f), 100.0f, percentLabel),
@@ -108,7 +124,7 @@ void LuckySevenProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::
         const auto wet = mixPercent->load() / 100.0f;
         engine.setOutputGains (std::sqrt (std::max (0.0f, 1.0f - wet * wet)), wet);
     }
-    engine.setWetFilter (lowCutHz->load(), highCutHz->load());
+    engine.setLowCut (lowCutHz->load());
     engine.setWidth (widthPercent->load() / 100.0f);
     engine.process (buffer);
 }
@@ -137,7 +153,12 @@ void LuckySevenProcessor::setStateInformation (const void* data, int sizeInBytes
     if (xml == nullptr || ! xml->hasTagName (parameters.state.getType()))
         return;
 
-    parameters.replaceState (juce::ValueTree::fromXml (*xml));
+    auto state = juce::ValueTree::fromXml (*xml);
+    if (static_cast<int> (state.getProperty (stateVersionProperty, 1)) < 2)
+        migrateSlotDamping (state);
+    state.setProperty (stateVersionProperty, stateVersion, nullptr);
+
+    parameters.replaceState (state);
     requestSelectedFile();
 }
 

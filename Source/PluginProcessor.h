@@ -16,15 +16,19 @@ public:
     static inline const juce::StringArray outputModes { "Mix", "Blend", "Send" };
     static constexpr float blendSilentDb = -60.0f;
     static inline const juce::String lowCutId { "lowCut" };
-    static inline const juce::String highCutId { "highCut" };
+    // Keeps the ID of the High Cut parameter it replaced, so saved sessions restore their setting.
+    static inline const juce::String dampingId { "highCut" };
     static inline const juce::String widthId { "width" };
     static constexpr float lowCutMaxHz = 1000.0f;
-    static constexpr float highCutMinHz = 1000.0f;
+    static constexpr float dampingMinHz = 250.0f;
+    static constexpr float legacyDampingMinHz = 1000.0f;
     static inline const juce::Identifier irIdProperty { "irId" };
     static inline const juce::Identifier viewProperty { "view" };
     static inline const juce::Identifier mapFilterProperty { "mapFilter" };
     static inline const juce::Identifier activeSlotProperty { "abSlot" };
     static inline const juce::Identifier slotType { "Slot" };
+    static inline const juce::Identifier stateVersionProperty { "stateVersion" };
+    static constexpr int stateVersion = 2;
     static inline const juce::Identifier slotIndexProperty { "index" };
 
     LuckySevenProcessor();
@@ -69,6 +73,12 @@ public:
     /** Untouched mid-band T60 of the loaded program in seconds. */
     float getOriginalT60() const noexcept { return loader->getOriginalT60(); }
 
+    /** Decay in percent that the reverb is currently playing, which lags the knob while an IR rebuilds; -1 before loading. */
+    float getAppliedDecayPercent() const noexcept { return std::max (-1.0f, loader->getInstalledDecayRatio() * 100.0f); }
+
+    /** Damping frequency that the reverb is currently playing, which lags the knob while an IR rebuilds; -1 before loading. */
+    float getAppliedDampingHz() const noexcept { return loader->getInstalledDampingHz(); }
+
     /** Input and reverb peaks since the last call, for the UI's activity display. */
     std::pair<float, float> takePeaks() noexcept { return engine.takePeaks(); }
 
@@ -91,7 +101,6 @@ private:
     std::atomic<float>* blendDb = nullptr;
     std::atomic<float>* outputMode = nullptr;
     std::atomic<float>* lowCutHz = nullptr;
-    std::atomic<float>* highCutHz = nullptr;
     std::atomic<float>* widthPercent = nullptr;
     double hostSampleRate = 48000.0;
 

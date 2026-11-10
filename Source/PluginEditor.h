@@ -59,7 +59,7 @@ private:
     juce::TextButton programButton, logoButton;
     lucky::HeartButton favouriteButton;
     juce::DrawableButton menuButton { "Menu", juce::DrawableButton::ImageFitted };
-    Knob predelay, decay, lowCut, highCut, width, mix;
+    Knob predelay, decay, lowCut, damping, width, mix;
     std::array<juce::TextButton, 3> modeButtons;
     std::array<juce::TextButton, 2> slotButtons;
     std::unique_ptr<juce::ParameterAttachment> modeAttachment;

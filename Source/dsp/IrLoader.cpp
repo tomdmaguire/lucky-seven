@@ -6,13 +6,19 @@ namespace lucky
 
 namespace
 {
-constexpr int pollIntervalMs = 20;
+constexpr int pollIntervalMs = 10;
 constexpr float ratioTolerance = 0.001f;
+constexpr float dampingToleranceHz = 1.0f;
 constexpr double maxIrSeconds = 30.0;
 } // namespace
 
-IrLoader::IrLoader (ReverbEngine& engineToFeed, std::atomic<float>& decayPercentSource)
-    : juce::Thread ("Lucky Seven IR loader"), engine (engineToFeed), decayPercent (decayPercentSource)
+bool IrLoader::Shape::differsFrom (const Shape& other) const noexcept
+{
+    return std::abs (ratio - other.ratio) > ratioTolerance || std::abs (dampingHz - other.dampingHz) > dampingToleranceHz;
+}
+
+IrLoader::IrLoader (ReverbEngine& engineToFeed, std::atomic<float>& decayPercentSource, std::atomic<float>& dampingHzSource)
+    : juce::Thread ("Lucky Seven IR loader"), engine (engineToFeed), decayPercent (decayPercentSource), dampingHz (dampingHzSource)
 {
     startThread();
 }
@@ -36,10 +42,14 @@ void IrLoader::invalidate()
     notify();
 }
 
+IrLoader::Shape IrLoader::readShape() const noexcept
+{
+    return { juce::jlimit (0.1f, 1.0f, decayPercent.load() / 100.0f), dampingHz.load() };
+}
+
 void IrLoader::run()
 {
-    auto lastSeenRatio = -1.0f;
-    auto stableSinceMs = juce::Time::getMillisecondCounter();
+    auto lastInstallMs = juce::Time::getMillisecondCounter();
 
     while (! threadShouldExit())
     {
@@ -53,26 +63,23 @@ void IrLoader::run()
             rateToLoad = pendingRate;
         }
 
-        const auto ratio = juce::jlimit (0.1f, 1.0f, decayPercent.load() / 100.0f);
+        const auto shape = readShape();
         const auto now = juce::Time::getMillisecondCounter();
-        if (std::abs (ratio - lastSeenRatio) > ratioTolerance)
-        {
-            lastSeenRatio = ratio;
-            stableSinceMs = now;
-        }
 
         if (entryToLoad)
         {
             loadEntry (*entryToLoad, rateToLoad);
-            install (ratio);
+            install (shape);
+            lastInstallMs = now;
             continue;
         }
 
-        const auto settled = now - stableSinceMs >= static_cast<juce::uint32> (debounceMs);
-        const auto ratioChanged = std::abs (ratio - installedRatio) > ratioTolerance;
-
-        if (original.getNumSamples() > 0 && (forceRebuild.exchange (false) || (settled && ratioChanged)))
-            install (ratio);
+        const auto intervalElapsed = now - lastInstallMs >= static_cast<juce::uint32> (minRebuildIntervalMs);
+        if (original.getNumSamples() > 0 && (forceRebuild.exchange (false) || (intervalElapsed && shape.differsFrom (installed))))
+        {
+            install (shape);
+            lastInstallMs = now;
+        }
     }
 }
 
@@ -100,14 +107,16 @@ void IrLoader::loadEntry (const IrEntry& entry, double hostSampleRate)
     originalT60 = profile.midT60;
 }
 
-void IrLoader::install (float ratio)
+void IrLoader::install (Shape shape)
 {
     if (original.getNumSamples() == 0)
         return;
 
-    const auto shaped = shortenDecay (original, originalRate, profile, ratio);
+    const auto shaped = shortenDecay (original, originalRate, profile, shape.ratio, shape.dampingHz);
     engine.loadIr (splitTrueStereo (shaped, originalRate));
-    installedRatio = ratio;
+    installed = shape;
+    installedDecayRatio = shape.ratio;
+    installedDampingHz = shape.dampingHz;
 }
 
 } // namespace lucky

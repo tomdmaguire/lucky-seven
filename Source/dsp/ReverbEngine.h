@@ -7,7 +7,7 @@
 namespace lucky
 {
 
-/** True-stereo convolution reverb: predelay -> (L-in and R-in convolutions summed) -> low/high cut -> dry and wet gains.
+/** True-stereo convolution reverb: predelay -> (L-in and R-in convolutions summed) -> low cut -> dry and wet gains.
     Each convolution is split into a zero-latency head on the audio thread and a tail computed on a background thread,
     so no single audio block carries the long-tail work. */
 class ReverbEngine
@@ -35,8 +35,8 @@ public:
     /** Sets the linear gains applied to the dry and reverb signals; changes are smoothed. */
     void setOutputGains (float dryGain, float wetGain);
 
-    /** Sets the 12 dB/oct low and high cut applied to the reverb signal only. */
-    void setWetFilter (float lowCutHz, float highCutHz);
+    /** Sets the 12 dB/oct low cut applied to the reverb signal only; changes are smoothed. */
+    void setLowCut (float frequencyHz);
 
     /** Sets the stereo width of the reverb signal only, from 0 (mono) to 1 (the IR's own width); changes are smoothed. */
     void setWidth (float width);
@@ -88,8 +88,8 @@ private:
     juce::SmoothedValue<float> dryGain { 1.0f }, wetGain { 0.0f };
     juce::SmoothedValue<float> predelaySamples;
     juce::SmoothedValue<float> width { 1.0f };
-    Filter lowCut, highCut;
-    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> lowCutHz { minCutHz }, highCutHz { maxCutHz };
+    Filter lowCut;
+    juce::SmoothedValue<float, juce::ValueSmoothingTypes::Multiplicative> lowCutHz { minCutHz };
     juce::AudioBuffer<float> leftBus, rightBus, dryBus, tailInput;
     double currentSampleRate = 48000.0;
     int capacity = 0;

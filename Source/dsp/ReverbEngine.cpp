@@ -18,7 +18,6 @@ void holdPeak (std::atomic<float>& peak, float value) noexcept
         peak.store (value, std::memory_order_relaxed);
 }
 constexpr float openLowCutHz = ReverbEngine::minCutHz + 0.5f;
-constexpr float openHighCutHz = ReverbEngine::maxCutHz - 1.0f;
 } // namespace
 
 ReverbEngine::TailWorker::TailWorker (std::array<TailConvolver, 2>& tailsToServe)
@@ -68,15 +67,10 @@ void ReverbEngine::prepare (double sampleRate, int maximumBlockSize)
     wetGain.reset (sampleRate, gainSmoothingSeconds);
     width.reset (sampleRate, gainSmoothingSeconds);
     lowCutHz.reset (sampleRate, filterSmoothingSeconds);
-    highCutHz.reset (sampleRate, filterSmoothingSeconds);
 
     lowCut.setType (Filter::Type::highpass);
-    highCut.setType (Filter::Type::lowpass);
-    for (auto* filter : { &lowCut, &highCut })
-    {
-        filter->setResonance (butterworthQ);
-        filter->prepare (stereoSpec);
-    }
+    lowCut.setResonance (butterworthQ);
+    lowCut.prepare (stereoSpec);
 
     leftBus.setSize (2, capacity);
     rightBus.setSize (2, capacity);
@@ -96,10 +90,7 @@ void ReverbEngine::reset()
     predelaySamples.setCurrentAndTargetValue (predelaySamples.getTargetValue());
     width.setCurrentAndTargetValue (width.getTargetValue());
     lowCutHz.setCurrentAndTargetValue (lowCutHz.getTargetValue());
-    highCutHz.setCurrentAndTargetValue (highCutHz.getTargetValue());
-
     lowCut.reset();
-    highCut.reset();
 
     for (auto& tail : tails)
         tail.reset();
@@ -119,11 +110,9 @@ void ReverbEngine::setOutputGains (float dry, float wet)
     wetGain.setTargetValue (std::max (wet, 0.0f));
 }
 
-void ReverbEngine::setWetFilter (float lowCutFrequency, float highCutFrequency)
+void ReverbEngine::setLowCut (float frequency)
 {
-    const auto nyquistLimit = static_cast<float> (currentSampleRate * 0.45);
-    lowCutHz.setTargetValue (juce::jlimit (minCutHz, maxCutHz, lowCutFrequency));
-    highCutHz.setTargetValue (juce::jlimit (minCutHz, std::min (maxCutHz, nyquistLimit), highCutFrequency));
+    lowCutHz.setTargetValue (juce::jlimit (minCutHz, maxCutHz, frequency));
 }
 
 void ReverbEngine::setWidth (float newWidth)
@@ -150,25 +139,17 @@ void ReverbEngine::narrowWet (juce::AudioBuffer<float>& buffer, int start, int l
 void ReverbEngine::filterWet (juce::dsp::AudioBlock<float> wet)
 {
     const auto length = static_cast<int> (wet.getNumSamples());
-    const auto fullyOpen = ! lowCutHz.isSmoothing() && ! highCutHz.isSmoothing()
-                        && lowCutHz.getTargetValue() <= openLowCutHz
-                        && highCutHz.getTargetValue() >= std::min (openHighCutHz, static_cast<float> (currentSampleRate * 0.45) - 1.0f);
-    if (fullyOpen)
+    if (! lowCutHz.isSmoothing() && lowCutHz.getTargetValue() <= openLowCutHz)
         return;
 
     for (int start = 0; start < length; start += filterUpdateInterval)
     {
         const auto count = std::min (filterUpdateInterval, length - start);
-        const auto low = lowCutHz.skip (count);
-        const auto high = highCutHz.skip (count);
-
-        lowCut.setCutoffFrequency (low);
-        highCut.setCutoffFrequency (high);
+        lowCut.setCutoffFrequency (lowCutHz.skip (count));
 
         auto section = wet.getSubBlock (static_cast<size_t> (start), static_cast<size_t> (count));
         juce::dsp::ProcessContextReplacing<float> context (section);
         lowCut.process (context);
-        highCut.process (context);
     }
 }
 

@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "dsp/DecayShaper.h"
 
 namespace
 {
@@ -122,18 +123,18 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     setupKnob (predelay, LuckySevenProcessor::predelayId, "PRE-DELAY");
     setupKnob (decay, LuckySevenProcessor::decayId, "DECAY");
     setupKnob (lowCut, LuckySevenProcessor::lowCutId, "LOW CUT");
-    setupKnob (highCut, LuckySevenProcessor::highCutId, "HIGH CUT");
+    setupKnob (damping, LuckySevenProcessor::dampingId, "DAMPING");
     setupKnob (width, LuckySevenProcessor::widthId, "WIDTH");
     setupKnob (mix, LuckySevenProcessor::mixId, "MIX");
     setupRangeLabels (lowCut, "20 Hz", "1 kHz");
-    setupRangeLabels (highCut, "1 kHz", "20 kHz");
+    setupRangeLabels (damping, "250 Hz", "20 kHz");
 
     lowCut.slider.textFromValueFunction = [] (double hertz) { return hertz <= lucky::ReverbEngine::minCutHz + 0.5 ? juce::String ("OFF") : formatHz (hertz); };
-    highCut.slider.textFromValueFunction = [] (double hertz) { return hertz >= lucky::ReverbEngine::maxCutHz - 1.0 ? juce::String ("OFF") : formatHz (hertz); };
+    damping.slider.textFromValueFunction = [] (double hertz) { return hertz >= lucky::dampingOffHz ? juce::String ("OFF") : formatHz (hertz); };
     lowCut.slider.getProperties().set ("cut", "low");
-    highCut.slider.getProperties().set ("cut", "high");
+    damping.slider.getProperties().set ("cut", "high");
     lowCut.slider.setTooltip ("Low cut on the reverb only, 12 dB/oct");
-    highCut.slider.setTooltip ("High cut on the reverb only, 12 dB/oct");
+    damping.slider.setTooltip ("Makes high frequencies above this die away faster: the start of the reverb darkens a little, the tail a lot");
     width.slider.textFromValueFunction = [] (double percent) { return percent < 0.5 ? juce::String ("MONO") : juce::String (juce::roundToInt (percent)) + "%"; };
     width.slider.setTooltip ("Stereo width of the reverb only, from mono to the IR's own width");
 
@@ -306,7 +307,7 @@ void LuckySevenView::applyAccent()
     favouriteButton.setTooltip (item != nullptr && item->favourite ? "Remove from favourites" : "Add to favourites");
     accent = item != nullptr ? lucky::theme::categoryColour (item->entry.categoryIndex) : lucky::theme::accent;
 
-    for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &lowCut.slider, &highCut.slider,
+    for (auto* component : std::initializer_list<juce::Component*> { &predelay.slider, &decay.slider, &lowCut.slider, &damping.slider,
                                                                      &width.slider, &mix.slider, &mapTab, &listTab })
     {
         component->setColour (juce::Slider::rotarySliderFillColourId, accent);
@@ -513,7 +514,7 @@ void LuckySevenView::resized()
 
     auto strip = bounds.removeFromBottom (stripHeight).reduced (24, 12);
     const auto knobSlot = strip.getWidth() / 6;
-    for (auto* knob : { &predelay, &decay, &width, &lowCut, &highCut, &mix })
+    for (auto* knob : { &predelay, &decay, &width, &lowCut, &damping, &mix })
     {
         auto slot = strip.removeFromLeft (knobSlot);
         knob->label.setBounds (slot.removeFromTop (18));

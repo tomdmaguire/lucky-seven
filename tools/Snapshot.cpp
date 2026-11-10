@@ -35,6 +35,7 @@ juce::String describe (LuckySevenProcessor& processor)
     const auto& state = processor.getParameters().state;
     return "ir=" + processor.getSelectedIrId() + "  decay=" + parameter (processor, LuckySevenProcessor::decayId).getCurrentValueAsText()
          + "  mix=" + parameter (processor, LuckySevenProcessor::mixId).getCurrentValueAsText()
+         + "  damping=" + parameter (processor, LuckySevenProcessor::dampingId).getCurrentValueAsText()
          + "  slot=" + juce::String (processor.getActiveSlot())
          + "  filter=" + state.getProperty (LuckySevenProcessor::mapFilterProperty).toString();
 }
@@ -59,6 +60,7 @@ int checkState()
     std::cout << "B (copy of A):  " << describe (processor) << "\n";
 
     setValue (processor, LuckySevenProcessor::mixId, 80.0f);
+    setValue (processor, LuckySevenProcessor::dampingId, 3000.0f);
     processor.selectIr ("Plates/06 Vocal Plate");
     std::cout << "B edited:       " << describe (processor) << "\n";
 
@@ -74,10 +76,34 @@ int checkState()
 
     restored.switchToSlot (1);
     std::cout << "restored, B:    " << describe (restored) << "\n";
+
+    for (const auto* savedHighCut : { "4000", "20000" })
+    {
+        auto xml = processor.getParameters().copyState().createXml();
+        for (auto* param : xml->getChildWithTagNameIterator ("PARAM"))
+            if (param->getStringAttribute ("id") == "highCut")
+                param->setAttribute ("value", savedHighCut);
+
+        xml->removeAttribute ("stateVersion");
+        xml->deleteAllChildElementsWithTagName ("Slot");
+        auto* legacySlot = xml->createNewChildElement ("Slot");
+        legacySlot->setAttribute ("index", 1);
+        legacySlot->setAttribute ("irId", "Plates/19 Crystal Plate");
+        legacySlot->setAttribute ("highCut", std::log (juce::String (savedHighCut).getDoubleValue() / 1000.0) / std::log (20.0));
+
+        juce::MemoryBlock legacyBlob;
+        juce::AudioProcessor::copyXmlToBinary (*xml, legacyBlob);
+        std::unique_ptr<juce::AudioProcessor> legacyOwner (createPluginFilter());
+        auto& legacy = dynamic_cast<LuckySevenProcessor&> (*legacyOwner);
+        legacy.setStateInformation (legacyBlob.getData(), static_cast<int> (legacyBlob.getSize()));
+        std::cout << ("high cut " + juce::String (savedHighCut) + ":").paddedRight (' ', 16) << describe (legacy) << "\n";
+        legacy.switchToSlot (1);
+        std::cout << "  its old B:     " << describe (legacy) << "\n";
+    }
     return 0;
 }
 
-/** Presses Shift+Right twice and Shift+Left once on the map, printing the program after each step. */
+/** Presses Right twice, Left, Up and Down on the map, printing the program after each step. */
 int checkKeys()
 {
     std::unique_ptr<juce::AudioProcessor> owner (createPluginFilter());
