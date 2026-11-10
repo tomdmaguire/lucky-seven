@@ -12,9 +12,9 @@ namespace lucky
 class IrLoader final : private juce::Thread
 {
 public:
-    /** Minimum time between rebuilds while decay or damping moves; matches the head convolver's 50 ms crossfade,
-        so each swap finishes fading before the next one starts. */
-    static constexpr int minRebuildIntervalMs = 50;
+    /** Rebuilds once decay and damping have been still for this long. Each swap restarts the head convolver's
+        history, so swapping continuously while a knob moves would make the early reverb pulse. */
+    static constexpr int settleMs = 100;
 
     IrLoader (ReverbEngine& engineToFeed, std::atomic<float>& decayPercentSource, std::atomic<float>& dampingHzSource);
     ~IrLoader() override;

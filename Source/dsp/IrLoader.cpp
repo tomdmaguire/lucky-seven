@@ -49,7 +49,8 @@ IrLoader::Shape IrLoader::readShape() const noexcept
 
 void IrLoader::run()
 {
-    auto lastInstallMs = juce::Time::getMillisecondCounter();
+    Shape lastSeen;
+    auto stableSinceMs = juce::Time::getMillisecondCounter();
 
     while (! threadShouldExit())
     {
@@ -65,21 +66,22 @@ void IrLoader::run()
 
         const auto shape = readShape();
         const auto now = juce::Time::getMillisecondCounter();
+        if (shape.differsFrom (lastSeen))
+        {
+            lastSeen = shape;
+            stableSinceMs = now;
+        }
 
         if (entryToLoad)
         {
             loadEntry (*entryToLoad, rateToLoad);
             install (shape);
-            lastInstallMs = now;
             continue;
         }
 
-        const auto intervalElapsed = now - lastInstallMs >= static_cast<juce::uint32> (minRebuildIntervalMs);
-        if (original.getNumSamples() > 0 && (forceRebuild.exchange (false) || (intervalElapsed && shape.differsFrom (installed))))
-        {
+        const auto settled = now - stableSinceMs >= static_cast<juce::uint32> (settleMs);
+        if (original.getNumSamples() > 0 && (forceRebuild.exchange (false) || (settled && shape.differsFrom (installed))))
             install (shape);
-            lastInstallMs = now;
-        }
     }
 }
 
