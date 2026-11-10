@@ -61,6 +61,9 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
     const auto isOff = (cut == "low" && sliderPos <= 0.001f) || (fillsFromEnd && sliderPos >= 0.999f);
     const auto colour = slider.isEnabled() && ! isOff ? slider.findColour (juce::Slider::rotarySliderFillColourId) : theme::textDim.withAlpha (0.5f);
     const auto angle = startAngle + sliderPos * (endAngle - startAngle);
+    const auto applied = static_cast<float> (static_cast<double> (slider.getProperties().getWithDefault ("applied", -1.0)));
+    const auto catchingUp = applied >= 0.0f && std::abs (applied - sliderPos) > 0.004f;
+    const auto heardAngle = catchingUp ? startAngle + applied * (endAngle - startAngle) : angle;
 
     g.setColour (colour.withAlpha (0.07f));
     g.fillEllipse (juce::Rectangle<float> (radius * 2.0f, radius * 2.0f).withCentre (centre));
@@ -70,13 +73,25 @@ void LuckyLookAndFeel::drawRotarySlider (juce::Graphics& g, int x, int y, int wi
     g.setColour (colour.withAlpha (0.25f));
     g.strokePath (ring, juce::PathStrokeType (1.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
+    const juce::PathStrokeType arcStroke (2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded);
+    const auto pending = theme::textDim.withAlpha (0.6f);
+
     juce::Path value;
     value.addCentredArc (centre.x, centre.y, radius - 1.0f, radius - 1.0f, 0.0f,
-                         fillsFromEnd ? angle : startAngle, fillsFromEnd ? endAngle : angle, true);
+                         fillsFromEnd ? std::max (angle, heardAngle) : startAngle, fillsFromEnd ? endAngle : std::min (angle, heardAngle), true);
     g.setColour (colour);
-    g.strokePath (value, juce::PathStrokeType (2.5f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+    g.strokePath (value, arcStroke);
+
+    if (catchingUp)
+    {
+        juce::Path gap;
+        gap.addCentredArc (centre.x, centre.y, radius - 1.0f, radius - 1.0f, 0.0f, std::min (angle, heardAngle), std::max (angle, heardAngle), true);
+        g.setColour (pending);
+        g.strokePath (gap, arcStroke);
+    }
 
     const auto tip = centre.getPointOnCircumference (radius - 1.0f, angle);
+    g.setColour (catchingUp ? pending : colour);
     g.fillEllipse (juce::Rectangle<float> (7.0f, 7.0f).withCentre (tip));
 
     g.setColour (isOff ? theme::textDim : theme::text);

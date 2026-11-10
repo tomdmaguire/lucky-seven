@@ -30,6 +30,18 @@ std::unique_ptr<juce::Drawable> makeMenuIcon (juce::Colour colour)
     drawable->setFill (colour);
     return drawable;
 }
+
+/** Stores where on the knob the reverb's current IR sits, so the knob can show the part still being rebuilt in grey. */
+void showAppliedValue (juce::Slider& slider, float appliedValue)
+{
+    const auto proportion = appliedValue < 0.0f ? -1.0 : slider.valueToProportionOfLength (appliedValue);
+    auto& properties = slider.getProperties();
+    if (! juce::approximatelyEqual (static_cast<double> (properties.getWithDefault ("applied", -1.0)), proportion))
+    {
+        properties.set ("applied", proportion);
+        slider.repaint();
+    }
+}
 } // namespace
 
 LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
@@ -178,7 +190,7 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
         }
 
     setSize (baseWidth, baseHeight);
-    startTimerHz (20);
+    startTimerHz (30);
 }
 
 LuckySevenView::~LuckySevenView()
@@ -359,6 +371,8 @@ void LuckySevenView::timerCallback()
     }
 
     browser.setDecayRatio (static_cast<float> (decay.slider.getValue() / 100.0));
+    showAppliedValue (decay.slider, audioProcessor.getAppliedDecayPercent());
+    showAppliedValue (damping.slider, audioProcessor.getAppliedDampingHz());
 
     if (const auto original = audioProcessor.getOriginalT60(); ! juce::approximatelyEqual (original, shownOriginalT60))
     {
