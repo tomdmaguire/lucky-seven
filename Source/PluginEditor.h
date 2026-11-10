@@ -27,6 +27,9 @@ public:
     void paint (juce::Graphics&) override;
     void resized() override;
 
+    /** Tab switches between the sound map and the program list. */
+    bool keyPressed (const juce::KeyPress&) override;
+
 private:
     struct Knob
     {

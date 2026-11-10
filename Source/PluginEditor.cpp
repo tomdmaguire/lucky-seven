@@ -81,6 +81,8 @@ LuckySevenView::LuckySevenView (LuckySevenProcessor& p)
     mapTab.onClick = [this] { if (mapTab.getToggleState()) setView (lucky::BrowserPanel::View::map); };
     listTab.setComponentID ("listTab");
     listTab.onClick = [this] { if (listTab.getToggleState()) setView (lucky::BrowserPanel::View::list); };
+    mapTab.setTooltip ("Sound map (Tab switches views)");
+    listTab.setTooltip ("Program list (Tab switches views)");
     setView (lucky::BrowserPanel::viewFromString (
         audioProcessor.getParameters().state.getProperty (LuckySevenProcessor::viewProperty, "map").toString()));
 
@@ -241,6 +243,15 @@ void LuckySevenView::setView (lucky::BrowserPanel::View view)
     listTab.setToggleState (view == lucky::BrowserPanel::View::list, juce::dontSendNotification);
     audioProcessor.getParameters().state.setProperty (LuckySevenProcessor::viewProperty,
                                                       lucky::BrowserPanel::viewToString (view), nullptr);
+}
+
+bool LuckySevenView::keyPressed (const juce::KeyPress& key)
+{
+    if (key.getKeyCode() != juce::KeyPress::tabKey)
+        return false;
+
+    setView (listTab.getToggleState() ? lucky::BrowserPanel::View::map : lucky::BrowserPanel::View::list);
+    return true;
 }
 
 void LuckySevenView::showOutputMode (int mode)
