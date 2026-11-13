@@ -1,6 +1,6 @@
 # Lucky Seven
 
-Dial in the right reverb, fast. Lucky Seven is a free true-stereo convolution reverb for macOS (VST3 and AU). It comes with 134 Bricasti M7 reverbs, works with any impulse-response library, and adds a decay control, a sound map for browsing, and quick ways to blend the reverb in.
+Dial in the right reverb, fast. Lucky Seven is a free true-stereo convolution reverb for macOS (VST3 and AU). It works with Samplicity's free captures of the Bricasti M7 (134 programs, downloaded from Samplicity in one click) and any other impulse-response library, and adds a decay control, a sound map for browsing, and quick ways to blend the reverb in.
 
 Website: https://tomdmaguire.github.io/lucky-seven/
 
@@ -75,4 +75,4 @@ build/LuckySevenSnapshot --check-keys                         # keyboard navigat
 
 Lucky Seven is released under the [GNU Affero General Public License v3.0](LICENSE). It is built with [JUCE](https://juce.com), which is used here under the AGPLv3.
 
-Lucky Seven is an independent project and is not affiliated with Bricasti Design or Samplicity.
+Lucky Seven is an independent project and is not affiliated with or endorsed by Bricasti Design or Samplicity. No impulse responses are included with it. Bricasti and M7 are trademarks of Bricasti Design; they're used here only to say which captures Lucky Seven works with.
